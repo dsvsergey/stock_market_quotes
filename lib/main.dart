@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'views/home_screen.dart';
+import 'l10n/app_localizations_delegate.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,6 +25,16 @@ class MainApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         useMaterial3: true,
       ),
+      localizationsDelegates: const [
+        AppLocalizationsDelegate(),
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('uk'),
+        Locale('en'),
+      ],
       home: const HomeScreen(),
     );
   }

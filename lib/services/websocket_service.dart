@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:dartz/dartz.dart';
 import '../models/quote.dart';
+import 'database_service.dart';
 
 class WebSocketFailure {
   final String message;
@@ -12,6 +13,9 @@ class WebSocketFailure {
 class WebSocketService {
   WebSocketChannel? _channel;
   final _quoteController = StreamController<Quote>.broadcast();
+  final DatabaseService _databaseService;
+
+  WebSocketService(this._databaseService);
 
   bool get isConnected => _channel != null;
   Stream<Quote> get quoteStream => _quoteController.stream;
@@ -27,7 +31,7 @@ class WebSocketService {
       );
 
       _channel!.stream.listen(
-        (data) {
+        (data) async {
           try {
             final json = jsonDecode(data);
             final quote = Quote(
@@ -35,7 +39,13 @@ class WebSocketService {
               value: json['value'].toDouble(),
               timestamp: DateTime.now(),
             );
-            _quoteController.add(quote);
+
+            // Зберігаємо котирування в базу даних
+            final result = await _databaseService.saveQuote(quote);
+            result.fold(
+              (failure) => print('Помилка збереження: ${failure.message}'),
+              (_) => _quoteController.add(quote),
+            );
           } catch (e) {
             print('Помилка парсингу даних: $e');
           }

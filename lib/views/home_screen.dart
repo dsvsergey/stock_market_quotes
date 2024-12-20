@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/providers.dart';
+import '../l10n/app_localizations.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final isConnected = ref.watch(websocketConnectionProvider);
     final quoteStream = ref.watch(quoteStreamProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Trade Statistics'),
+        title: Text(l10n.appTitle),
         actions: [
           Icon(
             isConnected ? Icons.cloud_done : Icons.cloud_off,
@@ -47,13 +49,13 @@ class HomeScreen extends ConsumerWidget {
                       },
                     );
                   },
-                  child: Text(isConnected ? 'Стоп' : 'Старт'),
+                  child: Text(isConnected ? l10n.stop : l10n.start),
                 ),
                 ElevatedButton(
                   onPressed: () {
                     // TODO: Implement statistics calculation
                   },
-                  child: const Text('Статистика'),
+                  child: Text(l10n.statistics),
                 ),
               ],
             ),
@@ -62,29 +64,46 @@ class HomeScreen extends ConsumerWidget {
               child: Card(
                 child: Padding(
                   padding: const EdgeInsets.all(8.0),
-                  child: quoteStream.when(
-                    data: (quote) => Center(
-                      child: Text(
-                        'Останнє котирування: ${quote.value}',
-                        style: Theme.of(context).textTheme.headlineSmall,
+                  child: ref.watch(lastQuotesProvider(10)).when(
+                        data: (quotes) {
+                          if (quotes.isEmpty) {
+                            return Center(
+                              child: Text(l10n.loading),
+                            );
+                          }
+                          return ListView.builder(
+                            itemCount: quotes.length,
+                            itemBuilder: (context, index) {
+                              final quote = quotes[index];
+                              return ListTile(
+                                title: Text(
+                                  '${l10n.lastQuote}: ${quote.value}',
+                                  style: Theme.of(context).textTheme.bodyLarge,
+                                ),
+                                subtitle: Text(
+                                  'ID: ${quote.quoteId}',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                              );
+                            },
+                          );
+                        },
+                        loading: () => Center(
+                          child: Text(l10n.loading),
+                        ),
+                        error: (error, stack) => Center(
+                          child: Text('${l10n.error}: $error'),
+                        ),
                       ),
-                    ),
-                    loading: () => const Center(
-                      child: CircularProgressIndicator(),
-                    ),
-                    error: (error, stack) => Center(
-                      child: Text('Помилка: $error'),
-                    ),
-                  ),
                 ),
               ),
             ),
             const SizedBox(height: 20),
-            const Card(
+            Card(
               child: Padding(
-                padding: EdgeInsets.all(8.0),
+                padding: const EdgeInsets.all(8.0),
                 child: Center(
-                  child: Text('Тут буде таблиця статистики'),
+                  child: Text(l10n.statisticsTable),
                 ),
               ),
             ),
