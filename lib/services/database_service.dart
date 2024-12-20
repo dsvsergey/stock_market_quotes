@@ -2,6 +2,7 @@ import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:dartz/dartz.dart';
 import '../models/quote.dart';
+import '../l10n/app_localizations.dart';
 
 class DatabaseFailure {
   final String message;
@@ -10,8 +11,9 @@ class DatabaseFailure {
 
 class DatabaseService {
   late Future<Isar> db;
+  final AppLocalizations l10n;
 
-  DatabaseService() {
+  DatabaseService(this.l10n) {
     db = openDB();
   }
 
@@ -50,7 +52,7 @@ class DatabaseService {
     yield* isar.quotes.where().watch(fireImmediately: true);
   }
 
-  Future<Either<DatabaseFailure, void>> clearAllQuotes() async {
+  Future<Either<DatabaseFailure, Unit>> clearAllQuotes() async {
     try {
       final isar = await db;
       await isar.writeTxn(() async {
@@ -58,7 +60,7 @@ class DatabaseService {
       });
       return right(unit);
     } catch (e) {
-      return left(DatabaseFailure('Помилка общения бази даних: $e'));
+      return left(DatabaseFailure('${l10n.databaseClearError}: $e'));
     }
   }
 }

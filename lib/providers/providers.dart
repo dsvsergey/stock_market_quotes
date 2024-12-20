@@ -7,7 +7,8 @@ import '../services/statistics_service.dart';
 import '../l10n/app_localizations.dart';
 
 final databaseServiceProvider = Provider<DatabaseService>((ref) {
-  return DatabaseService();
+  final l10n = ref.watch(localizationProvider);
+  return DatabaseService(l10n);
 });
 
 final websocketServiceProvider = Provider<WebSocketService>((ref) {
@@ -46,7 +47,16 @@ final statisticsServiceProvider = Provider<StatisticsService>((ref) {
   return StatisticsService(ref.watch(localizationProvider));
 });
 
+// Провайдер для контролю оновлення статистики
+final statisticsUpdateProvider = StateProvider<int>((ref) => 0);
+
+// Оновлюємо statisticsProvider щоб він реагував на зміни statisticsUpdateProvider
 final statisticsProvider = FutureProvider<Statistics>((ref) async {
+  // Спостерігаємо за оновленнями
+  ref.watch(statisticsUpdateProvider);
+  // Додаємо спостереження за новими котируваннями
+  ref.watch(quoteStreamProvider);
+
   final quotes = await ref.watch(allQuotesProvider.future);
   final statisticsService = ref.watch(statisticsServiceProvider);
 

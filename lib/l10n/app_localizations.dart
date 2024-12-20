@@ -27,7 +27,7 @@ class AppLocalizations {
       'mode': 'Мода',
       'median': 'Медіана',
       'lostQuotes': 'Втрачені котирування',
-      'calculationTime': 'Ча�� обчислення',
+      'calculationTime': 'Ча обчислення',
       'milliseconds': 'мс',
       'noDataError': 'Немає даних для обчислення',
       'statisticsError': 'Помилка обчислення статистики',
@@ -35,6 +35,7 @@ class AppLocalizations {
       'parsingDataError': 'Помилка парсингу даних',
       'websocketError': 'Помилка WebSocket',
       'connectionClosedMessage': 'WebSocket з\'єднання закрито',
+      'databaseClearError': 'Помилка очищення бази даних',
     },
     'en': {
       'appTitle': 'Trade Statistics',
@@ -61,6 +62,7 @@ class AppLocalizations {
       'parsingDataError': 'Data parsing error',
       'websocketError': 'WebSocket error',
       'connectionClosedMessage': 'WebSocket connection closed',
+      'databaseClearError': 'Database clearing error',
     },
   };
 
@@ -102,4 +104,6 @@ class AppLocalizations {
       _localizedValues[locale.languageCode]!['websocketError']!;
   String get connectionClosedMessage =>
       _localizedValues[locale.languageCode]!['connectionClosedMessage']!;
+  String get databaseClearError =>
+      _localizedValues[locale.languageCode]!['databaseClearError']!;
 }

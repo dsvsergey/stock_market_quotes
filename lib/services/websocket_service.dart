@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:dartz/dartz.dart';
 import '../models/quote.dart';
@@ -45,26 +46,26 @@ class WebSocketService {
             // Зберігаємо котирування в базу даних
             final result = await _databaseService.saveQuote(quote);
             result.fold(
-              (failure) => print('Помилка збереження: ${failure.message}'),
+              (failure) => log('${l10n.saveError}: ${failure.message}'),
               (_) => _quoteController.add(quote),
             );
           } catch (e) {
-            print('${l10n.parsingDataError}: $e');
+            log('${l10n.parsingDataError}: $e');
           }
         },
         onError: (error) {
-          print('${l10n.websocketError}: $error');
+          log('${l10n.websocketError}: $error');
           disconnect();
         },
         onDone: () {
-          print(l10n.connectionClosedMessage);
+          log(l10n.connectionClosedMessage);
           disconnect();
         },
       );
 
       return right(unit);
     } catch (e) {
-      return left(WebSocketFailure('Помилка підключення до WebSocket: $e'));
+      return left(WebSocketFailure('${l10n.connectionError}: $e'));
     }
   }
 

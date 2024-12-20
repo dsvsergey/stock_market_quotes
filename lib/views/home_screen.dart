@@ -4,6 +4,7 @@ import '../providers/providers.dart';
 import '../l10n/app_localizations.dart';
 import 'quote_chart.dart';
 import 'statistics_table.dart';
+import 'package:share_plus/share_plus.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -21,6 +22,35 @@ class HomeScreen extends ConsumerWidget {
           Icon(
             isConnected ? Icons.cloud_done : Icons.cloud_off,
             color: isConnected ? Colors.green : Colors.red,
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline),
+            onPressed: () async {
+              final databaseService = ref.read(databaseServiceProvider);
+              final result = await databaseService.clearAllQuotes();
+              result.fold(
+                (failure) => ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(failure.message)),
+                ),
+                (_) => ref.read(statisticsUpdateProvider.notifier).state++,
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.share),
+            onPressed: () {
+              final statistics = ref.read(statisticsProvider).value;
+              if (statistics != null) {
+                final text = '''
+${l10n.mean}: ${statistics.mean.toStringAsFixed(2)}
+${l10n.standardDeviation}: ${statistics.standardDeviation.toStringAsFixed(2)}
+${l10n.mode}: ${statistics.mode.toStringAsFixed(2)}
+${l10n.median}: ${statistics.median.toStringAsFixed(2)}
+${l10n.lostQuotes}: ${statistics.lostQuotes}
+''';
+                Share.share(text);
+              }
+            },
           ),
           const SizedBox(width: 16),
         ],
@@ -55,9 +85,18 @@ class HomeScreen extends ConsumerWidget {
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    // TODO: Implement statistics calculation
+                    ref.read(statisticsUpdateProvider.notifier).state++;
                   },
-                  child: Text(l10n.statistics),
+                  child: ref.watch(statisticsProvider).maybeWhen(
+                        loading: () => const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                          ),
+                        ),
+                        orElse: () => Text(l10n.statistics),
+                      ),
                 ),
               ],
             ),
