@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/providers.dart';
 import '../l10n/app_localizations.dart';
+import 'quote_chart.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -10,7 +11,7 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final isConnected = ref.watch(websocketConnectionProvider);
-    final quoteStream = ref.watch(quoteStreamProvider);
+    final quotesStream = ref.watch(lastQuotesProvider(100));
 
     return Scaffold(
       appBar: AppBar(
@@ -64,37 +65,18 @@ class HomeScreen extends ConsumerWidget {
               child: Card(
                 child: Padding(
                   padding: const EdgeInsets.all(8.0),
-                  child: ref.watch(lastQuotesProvider(10)).when(
-                        data: (quotes) {
-                          if (quotes.isEmpty) {
-                            return Center(
-                              child: Text(l10n.loading),
-                            );
-                          }
-                          return ListView.builder(
-                            itemCount: quotes.length,
-                            itemBuilder: (context, index) {
-                              final quote = quotes[index];
-                              return ListTile(
-                                title: Text(
-                                  '${l10n.lastQuote}: ${quote.value}',
-                                  style: Theme.of(context).textTheme.bodyLarge,
-                                ),
-                                subtitle: Text(
-                                  'ID: ${quote.quoteId}',
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                              );
-                            },
-                          );
-                        },
-                        loading: () => Center(
-                          child: Text(l10n.loading),
-                        ),
-                        error: (error, stack) => Center(
-                          child: Text('${l10n.error}: $error'),
-                        ),
-                      ),
+                  child: quotesStream.when(
+                    data: (quotes) => QuoteChart(
+                      quotes: quotes,
+                      l10n: l10n,
+                    ),
+                    loading: () => Center(
+                      child: Text(l10n.loading),
+                    ),
+                    error: (error, stack) => Center(
+                      child: Text('${l10n.error}: $error'),
+                    ),
+                  ),
                 ),
               ),
             ),
