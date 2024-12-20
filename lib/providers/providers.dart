@@ -1,7 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/quote.dart';
+import '../models/statistics.dart';
 import '../services/database_service.dart';
 import '../services/websocket_service.dart';
+import '../services/statistics_service.dart';
+import '../l10n/app_localizations.dart';
 
 final databaseServiceProvider = Provider<DatabaseService>((ref) {
   return DatabaseService();
@@ -9,7 +12,8 @@ final databaseServiceProvider = Provider<DatabaseService>((ref) {
 
 final websocketServiceProvider = Provider<WebSocketService>((ref) {
   final databaseService = ref.watch(databaseServiceProvider);
-  final service = WebSocketService(databaseService);
+  final l10n = ref.watch(localizationProvider);
+  final service = WebSocketService(databaseService, l10n);
   ref.onDispose(() {
     service.dispose();
   });
@@ -36,4 +40,24 @@ final lastQuotesProvider =
   await for (final quotes in databaseService.watchQuotes()) {
     yield quotes.take(count).toList();
   }
+});
+
+final statisticsServiceProvider = Provider<StatisticsService>((ref) {
+  return StatisticsService(ref.watch(localizationProvider));
+});
+
+final statisticsProvider = FutureProvider<Statistics>((ref) async {
+  final quotes = await ref.watch(allQuotesProvider.future);
+  final statisticsService = ref.watch(statisticsServiceProvider);
+
+  final result = await statisticsService.calculateStatistics(quotes);
+  return result.fold(
+    (failure) => throw failure,
+    (statistics) => statistics,
+  );
+});
+
+// Додамо провайдер для локалізації
+final localizationProvider = Provider<AppLocalizations>((ref) {
+  throw UnimplementedError('Needs to be overridden in the widget tree');
 });

@@ -58,7 +58,7 @@ class DatabaseService {
       });
       return right(unit);
     } catch (e) {
-      return left(DatabaseFailure('Помилка очищення бази даних: $e'));
+      return left(DatabaseFailure('Помилка общения бази даних: $e'));
     }
   }
 }

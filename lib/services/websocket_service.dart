@@ -4,6 +4,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:dartz/dartz.dart';
 import '../models/quote.dart';
 import 'database_service.dart';
+import '../l10n/app_localizations.dart';
 
 class WebSocketFailure {
   final String message;
@@ -14,8 +15,9 @@ class WebSocketService {
   WebSocketChannel? _channel;
   final _quoteController = StreamController<Quote>.broadcast();
   final DatabaseService _databaseService;
+  final AppLocalizations l10n;
 
-  WebSocketService(this._databaseService);
+  WebSocketService(this._databaseService, this.l10n);
 
   bool get isConnected => _channel != null;
   Stream<Quote> get quoteStream => _quoteController.stream;
@@ -47,15 +49,15 @@ class WebSocketService {
               (_) => _quoteController.add(quote),
             );
           } catch (e) {
-            print('Помилка парсингу даних: $e');
+            print('${l10n.parsingDataError}: $e');
           }
         },
         onError: (error) {
-          print('Помилка WebSocket: $error');
+          print('${l10n.websocketError}: $error');
           disconnect();
         },
         onDone: () {
-          print('WebSocket з\'єднання закрито');
+          print(l10n.connectionClosedMessage);
           disconnect();
         },
       );
