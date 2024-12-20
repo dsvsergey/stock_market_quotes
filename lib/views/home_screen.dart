@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/providers.dart';
 import '../l10n/app_localizations.dart';
 import 'quote_chart.dart';
+import 'statistics_table.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -81,11 +82,23 @@ class HomeScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 20),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Center(
-                  child: Text(l10n.statisticsTable),
+            SizedBox(
+              height: 200,
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: ref.watch(statisticsProvider).when(
+                        data: (statistics) => StatisticsTable(
+                          statistics: statistics,
+                          l10n: l10n,
+                        ),
+                        loading: () => Center(
+                          child: Text(l10n.loading),
+                        ),
+                        error: (error, stack) => Center(
+                          child: Text('${l10n.error}: $error'),
+                        ),
+                      ),
                 ),
               ),
             ),
