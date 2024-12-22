@@ -27,8 +27,13 @@ const QuoteSchema = CollectionSchema(
       name: r'timestamp',
       type: IsarType.dateTime,
     ),
-    r'value': PropertySchema(
+    r'usedInCalculation': PropertySchema(
       id: 2,
+      name: r'usedInCalculation',
+      type: IsarType.bool,
+    ),
+    r'value': PropertySchema(
+      id: 3,
       name: r'value',
       type: IsarType.double,
     )
@@ -78,7 +83,8 @@ void _quoteSerialize(
 ) {
   writer.writeLong(offsets[0], object.quoteId);
   writer.writeDateTime(offsets[1], object.timestamp);
-  writer.writeDouble(offsets[2], object.value);
+  writer.writeBool(offsets[2], object.usedInCalculation);
+  writer.writeDouble(offsets[3], object.value);
 }
 
 Quote _quoteDeserialize(
@@ -90,7 +96,8 @@ Quote _quoteDeserialize(
   final object = Quote(
     quoteId: reader.readLong(offsets[0]),
     timestamp: reader.readDateTime(offsets[1]),
-    value: reader.readDouble(offsets[2]),
+    usedInCalculation: reader.readBoolOrNull(offsets[2]) ?? false,
+    value: reader.readDouble(offsets[3]),
   );
   object.id = id;
   return object;
@@ -108,6 +115,8 @@ P _quoteDeserializeProp<P>(
     case 1:
       return (reader.readDateTime(offset)) as P;
     case 2:
+      return (reader.readBoolOrNull(offset) ?? false) as P;
+    case 3:
       return (reader.readDouble(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -455,6 +464,16 @@ extension QuoteQueryFilter on QueryBuilder<Quote, Quote, QFilterCondition> {
     });
   }
 
+  QueryBuilder<Quote, Quote, QAfterFilterCondition> usedInCalculationEqualTo(
+      bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'usedInCalculation',
+        value: value,
+      ));
+    });
+  }
+
   QueryBuilder<Quote, Quote, QAfterFilterCondition> valueEqualTo(
     double value, {
     double epsilon = Query.epsilon,
@@ -547,6 +566,18 @@ extension QuoteQuerySortBy on QueryBuilder<Quote, Quote, QSortBy> {
     });
   }
 
+  QueryBuilder<Quote, Quote, QAfterSortBy> sortByUsedInCalculation() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'usedInCalculation', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Quote, Quote, QAfterSortBy> sortByUsedInCalculationDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'usedInCalculation', Sort.desc);
+    });
+  }
+
   QueryBuilder<Quote, Quote, QAfterSortBy> sortByValue() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'value', Sort.asc);
@@ -597,6 +628,18 @@ extension QuoteQuerySortThenBy on QueryBuilder<Quote, Quote, QSortThenBy> {
     });
   }
 
+  QueryBuilder<Quote, Quote, QAfterSortBy> thenByUsedInCalculation() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'usedInCalculation', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Quote, Quote, QAfterSortBy> thenByUsedInCalculationDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'usedInCalculation', Sort.desc);
+    });
+  }
+
   QueryBuilder<Quote, Quote, QAfterSortBy> thenByValue() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'value', Sort.asc);
@@ -623,6 +666,12 @@ extension QuoteQueryWhereDistinct on QueryBuilder<Quote, Quote, QDistinct> {
     });
   }
 
+  QueryBuilder<Quote, Quote, QDistinct> distinctByUsedInCalculation() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'usedInCalculation');
+    });
+  }
+
   QueryBuilder<Quote, Quote, QDistinct> distinctByValue() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'value');
@@ -646,6 +695,12 @@ extension QuoteQueryProperty on QueryBuilder<Quote, Quote, QQueryProperty> {
   QueryBuilder<Quote, DateTime, QQueryOperations> timestampProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'timestamp');
+    });
+  }
+
+  QueryBuilder<Quote, bool, QQueryOperations> usedInCalculationProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'usedInCalculation');
     });
   }
 

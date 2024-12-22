@@ -10,10 +10,12 @@ class Quote {
   final int quoteId;
   final double value;
   final DateTime timestamp;
+  bool usedInCalculation;
 
   Quote({
     required this.quoteId,
     required this.value,
     required this.timestamp,
+    this.usedInCalculation = false,
   });
 }

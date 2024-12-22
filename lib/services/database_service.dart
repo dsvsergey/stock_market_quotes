@@ -37,6 +37,18 @@ class DatabaseService {
     }
   }
 
+  Future<Either<DatabaseFailure, Unit>> updateQuote(Quote quote) async {
+    try {
+      final isar = await db;
+      await isar.writeTxn(() async {
+        await isar.quotes.put(quote);
+      });
+      return right(unit);
+    } catch (e) {
+      return left(DatabaseFailure('Помилка оновлення котирування: $e'));
+    }
+  }
+
   Future<Either<DatabaseFailure, List<Quote>>> getAllQuotes() async {
     try {
       final isar = await db;

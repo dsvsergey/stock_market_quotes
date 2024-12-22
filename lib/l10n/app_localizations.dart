@@ -27,11 +27,15 @@ class AppLocalizations {
       'mode': 'Мода',
       'median': 'Медіана',
       'lostQuotes': 'Втрачені котирування',
-      'calculationTime': 'Ча обчислення',
+      'calculationTime': 'Час обчислення',
       'milliseconds': 'мс',
       'noDataError': 'Немає даних для обчислення',
       'statisticsError': 'Помилка обчислення статистики',
       'saveError': 'Помилка збереження',
+      'updateError': 'Помилка оновлення котирування',
+      'calculationError': 'Помилка обчислення',
+      'getQuotesError': 'Помилка отримання котирувань',
+      'clearError': 'Помилка очищення даних',
       'parsingDataError': 'Помилка парсингу даних',
       'websocketError': 'Помилка WebSocket',
       'connectionClosedMessage': 'WebSocket з\'єднання закрито',
@@ -42,7 +46,8 @@ class AppLocalizations {
       'reconnectSuccess': 'Успішно перепідключено',
       'reconnectError': 'Помилка перепідключення',
       'creatingConnection': 'Створення SSL Socket з\'єднання...',
-      'socketConnected': 'Socket підключено, відправляємо WebSocket handshake...',
+      'socketConnected':
+          'Socket підключено, відправляємо WebSocket handshake...',
       'sendingHandshake': 'Відправляємо handshake',
       'connectionEstablished': 'WebSocket з\'єднання встановлено',
       'unexpectedResponse': 'Неочікувана відповідь',
@@ -72,6 +77,10 @@ class AppLocalizations {
       'noDataError': 'No data available for calculation',
       'statisticsError': 'Statistics calculation error',
       'saveError': 'Save error',
+      'updateError': 'Quote update error',
+      'calculationError': 'Calculation error',
+      'getQuotesError': 'Error getting quotes',
+      'clearError': 'Error clearing data',
       'parsingDataError': 'Data parsing error',
       'websocketError': 'WebSocket error',
       'connectionClosedMessage': 'WebSocket connection closed',
@@ -124,6 +133,14 @@ class AppLocalizations {
   String get statisticsError =>
       _localizedValues[locale.languageCode]!['statisticsError']!;
   String get saveError => _localizedValues[locale.languageCode]!['saveError']!;
+  String get updateError =>
+      _localizedValues[locale.languageCode]!['updateError']!;
+  String get calculationError =>
+      _localizedValues[locale.languageCode]!['calculationError']!;
+  String get getQuotesError =>
+      _localizedValues[locale.languageCode]!['getQuotesError']!;
+  String get clearError =>
+      _localizedValues[locale.languageCode]!['clearError']!;
   String get parsingDataError =>
       _localizedValues[locale.languageCode]!['parsingDataError']!;
   String get websocketError =>
@@ -156,6 +173,5 @@ class AppLocalizations {
       _localizedValues[locale.languageCode]!['receivedMessage']!;
   String get socketError =>
       _localizedValues[locale.languageCode]!['socketError']!;
-  String get pingError =>
-      _localizedValues[locale.languageCode]!['pingError']!;
+  String get pingError => _localizedValues[locale.languageCode]!['pingError']!;
 }
