@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/providers.dart';
 import '../l10n/app_localizations.dart';
-import 'quote_chart.dart';
 import 'statistics_table.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -13,6 +12,7 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final isConnected = ref.watch(websocketConnectionProvider);
+    final isIsolateRunning = ref.watch(websocketIsolateProvider).value ?? false;
     final quotesStream = ref.watch(lastQuotesProvider(100));
 
     return Scaffold(
@@ -22,6 +22,10 @@ class HomeScreen extends ConsumerWidget {
           Icon(
             isConnected ? Icons.cloud_done : Icons.cloud_off,
             color: isConnected ? Colors.green : Colors.red,
+          ),
+          Icon(
+            isIsolateRunning ? Icons.memory : Icons.memory_outlined,
+            color: isIsolateRunning ? Colors.green : Colors.red,
           ),
           IconButton(
             icon: const Icon(Icons.delete_outline),
@@ -115,9 +119,22 @@ ${l10n.lostQuotes}: ${statistics.lostQuotes}
                 child: Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: quotesStream.when(
-                    data: (quotes) => QuoteChart(
-                      quotes: quotes,
-                      l10n: l10n,
+                    data: (quotes) => ListView.builder(
+                      itemCount: quotes.length,
+                      itemBuilder: (context, index) {
+                        final quote = quotes[index];
+                        return ListTile(
+                          title:
+                              Text('Value: ${quote.value.toStringAsFixed(2)}'),
+                          subtitle: Text(
+                            'Time: ${quote.timestamp.toLocal().toString().split('.')[0]}',
+                          ),
+                          trailing: quote.usedInCalculation
+                              ? const Icon(Icons.check_circle,
+                                  color: Colors.green)
+                              : null,
+                        );
+                      },
                     ),
                     loading: () => Center(
                       child: Text(l10n.loading),
