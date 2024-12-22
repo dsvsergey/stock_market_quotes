@@ -6,11 +6,18 @@ import '../services/websocket_service.dart';
 import '../services/statistics_service.dart';
 import '../l10n/app_localizations.dart';
 
+// Провайдер для локалізації
+final localizationProvider = Provider<AppLocalizations>((ref) {
+  throw UnimplementedError('Needs to be overridden in the widget tree');
+});
+
+// База даних
 final databaseServiceProvider = Provider<DatabaseService>((ref) {
   final l10n = ref.watch(localizationProvider);
   return DatabaseService(l10n);
-});
+}, dependencies: [localizationProvider]);
 
+// WebSocket сервіс
 final websocketServiceProvider = Provider<WebSocketService>((ref) {
   final databaseService = ref.watch(databaseServiceProvider);
   final l10n = ref.watch(localizationProvider);
@@ -19,38 +26,41 @@ final websocketServiceProvider = Provider<WebSocketService>((ref) {
     service.dispose();
   });
   return service;
-});
+}, dependencies: [databaseServiceProvider, localizationProvider]);
 
+// Стан підключення WebSocket
 final websocketConnectionProvider = StateProvider<bool>((ref) => false);
 
+// Стрім котирувань
 final quoteStreamProvider = StreamProvider<Quote>((ref) {
   final websocketService = ref.watch(websocketServiceProvider);
   return websocketService.quoteStream;
-});
+}, dependencies: [websocketServiceProvider]);
 
-// Провайдер для отримання всіх котирувань з бази даних
+// Всі котирування з бази даних
 final allQuotesProvider = StreamProvider<List<Quote>>((ref) {
   final databaseService = ref.watch(databaseServiceProvider);
   return databaseService.watchQuotes();
-});
+}, dependencies: [databaseServiceProvider]);
 
-// Провайдер для отримання останніх N котирувань
+// Останні N котирувань
 final lastQuotesProvider =
     StreamProvider.family<List<Quote>, int>((ref, count) async* {
   final databaseService = ref.watch(databaseServiceProvider);
   await for (final quotes in databaseService.watchQuotes()) {
     yield quotes.take(count).toList();
   }
-});
+}, dependencies: [databaseServiceProvider]);
 
+// Сервіс статистики
 final statisticsServiceProvider = Provider<StatisticsService>((ref) {
   return StatisticsService(ref.watch(localizationProvider));
-});
+}, dependencies: [localizationProvider]);
 
-// Провайдер для контролю оновлення статистики
+// Контроль оновлення статистики
 final statisticsUpdateProvider = StateProvider<int>((ref) => 0);
 
-// Оновлюємо statisticsProvider щоб він реагував на зміни statisticsUpdateProvider
+// Провайдер статистики
 final statisticsProvider = FutureProvider<Statistics>((ref) async {
   // Спостерігаємо за оновленнями
   ref.watch(statisticsUpdateProvider);
@@ -65,9 +75,10 @@ final statisticsProvider = FutureProvider<Statistics>((ref) async {
     (failure) => throw failure,
     (statistics) => statistics,
   );
-});
-
-// Додамо провайдер для локалізації
-final localizationProvider = Provider<AppLocalizations>((ref) {
-  throw UnimplementedError('Needs to be overridden in the widget tree');
-});
+}, dependencies: [
+  statisticsServiceProvider,
+  statisticsUpdateProvider,
+  quoteStreamProvider,
+  allQuotesProvider,
+  localizationProvider,
+]);

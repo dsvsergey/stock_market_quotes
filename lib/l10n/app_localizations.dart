@@ -36,6 +36,19 @@ class AppLocalizations {
       'websocketError': 'Помилка WebSocket',
       'connectionClosedMessage': 'WebSocket з\'єднання закрито',
       'databaseClearError': 'Помилка очищення бази даних',
+      'connectionInProgress': 'З\'єднання вже виконується',
+      'connectionTimeout': 'Час очікування з\'єднання вичерпано',
+      'reconnectingMessage': 'Спроба перепідключення...',
+      'reconnectSuccess': 'Успішно перепідключено',
+      'reconnectError': 'Помилка перепідключення',
+      'creatingConnection': 'Створення SSL Socket з\'єднання...',
+      'socketConnected': 'Socket підключено, відправляємо WebSocket handshake...',
+      'sendingHandshake': 'Відправляємо handshake',
+      'connectionEstablished': 'WebSocket з\'єднання встановлено',
+      'unexpectedResponse': 'Неочікувана відповідь',
+      'receivedMessage': 'Отримано',
+      'socketError': 'Помилка сокета',
+      'pingError': 'Помилка відправки ping',
     },
     'en': {
       'appTitle': 'Trade Statistics',
@@ -63,6 +76,19 @@ class AppLocalizations {
       'websocketError': 'WebSocket error',
       'connectionClosedMessage': 'WebSocket connection closed',
       'databaseClearError': 'Database clearing error',
+      'connectionInProgress': 'Connection already in progress',
+      'connectionTimeout': 'Connection timeout',
+      'reconnectingMessage': 'Attempting to reconnect...',
+      'reconnectSuccess': 'Successfully reconnected',
+      'reconnectError': 'Reconnection error',
+      'creatingConnection': 'Creating SSL Socket connection...',
+      'socketConnected': 'Socket connected, sending WebSocket handshake...',
+      'sendingHandshake': 'Sending handshake',
+      'connectionEstablished': 'WebSocket connection established',
+      'unexpectedResponse': 'Unexpected response',
+      'receivedMessage': 'Received',
+      'socketError': 'Socket error',
+      'pingError': 'Ping error',
     },
   };
 
@@ -106,4 +132,30 @@ class AppLocalizations {
       _localizedValues[locale.languageCode]!['connectionClosedMessage']!;
   String get databaseClearError =>
       _localizedValues[locale.languageCode]!['databaseClearError']!;
+  String get connectionInProgress =>
+      _localizedValues[locale.languageCode]!['connectionInProgress']!;
+  String get connectionTimeout =>
+      _localizedValues[locale.languageCode]!['connectionTimeout']!;
+  String get reconnectingMessage =>
+      _localizedValues[locale.languageCode]!['reconnectingMessage']!;
+  String get reconnectSuccess =>
+      _localizedValues[locale.languageCode]!['reconnectSuccess']!;
+  String get reconnectError =>
+      _localizedValues[locale.languageCode]!['reconnectError']!;
+  String get creatingConnection =>
+      _localizedValues[locale.languageCode]!['creatingConnection']!;
+  String get socketConnected =>
+      _localizedValues[locale.languageCode]!['socketConnected']!;
+  String get sendingHandshake =>
+      _localizedValues[locale.languageCode]!['sendingHandshake']!;
+  String get connectionEstablished =>
+      _localizedValues[locale.languageCode]!['connectionEstablished']!;
+  String get unexpectedResponse =>
+      _localizedValues[locale.languageCode]!['unexpectedResponse']!;
+  String get receivedMessage =>
+      _localizedValues[locale.languageCode]!['receivedMessage']!;
+  String get socketError =>
+      _localizedValues[locale.languageCode]!['socketError']!;
+  String get pingError =>
+      _localizedValues[locale.languageCode]!['pingError']!;
 }
