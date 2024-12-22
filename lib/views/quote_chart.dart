@@ -4,15 +4,18 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import '../models/quote.dart';
 import '../l10n/app_localizations.dart';
+import 'dart:math';
 
 class QuoteChart extends StatelessWidget {
   final List<Quote> quotes;
   final AppLocalizations l10n;
+  final int maxPoints;
 
   const QuoteChart({
     super.key,
     required this.quotes,
     required this.l10n,
+    this.maxPoints = 100,
   });
 
   @override
@@ -21,12 +24,13 @@ class QuoteChart extends StatelessWidget {
       return Center(child: Text(l10n.noDataError));
     }
 
-    final spots = quotes.map((quote) {
-      return FlSpot(
-        quote.timestamp.millisecondsSinceEpoch.toDouble(),
-        quote.value,
-      );
-    }).toList();
+    final spots = quotes
+        .take(maxPoints)
+        .map((quote) => FlSpot(
+              quote.timestamp.millisecondsSinceEpoch.toDouble(),
+              quote.value,
+            ))
+        .toList();
 
     return LineChart(
       LineChartData(
@@ -36,15 +40,19 @@ class QuoteChart extends StatelessWidget {
             sideTitles: SideTitles(
               showTitles: true,
               getTitlesWidget: (value, meta) {
+                if (meta.min == value || meta.max == value) {
+                  return const SizedBox();
+                }
                 final date = DateTime.fromMillisecondsSinceEpoch(value.toInt());
                 return Padding(
                   padding: const EdgeInsets.all(4.0),
                   child: Text(
-                    '${date.hour}:${date.minute}:${date.second}',
+                    '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}:${date.second.toString().padLeft(2, '0')}',
                     style: const TextStyle(fontSize: 10),
                   ),
                 );
               },
+              interval: 2000,
               reservedSize: 32,
             ),
           ),
@@ -52,6 +60,7 @@ class QuoteChart extends StatelessWidget {
             sideTitles: SideTitles(
               showTitles: true,
               reservedSize: 40,
+              interval: 0.5,
             ),
           ),
           rightTitles: const AxisTitles(
@@ -75,6 +84,8 @@ class QuoteChart extends StatelessWidget {
             ),
           ),
         ],
+        minY: spots.map((s) => s.y).reduce(min) - 0.5,
+        maxY: spots.map((s) => s.y).reduce(max) + 0.5,
       ),
     );
   }

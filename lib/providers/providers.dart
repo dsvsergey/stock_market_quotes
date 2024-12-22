@@ -61,7 +61,7 @@ final statisticsServiceProvider = Provider<StatisticsService>((ref) {
 final statisticsUpdateProvider = StateProvider<int>((ref) => 0);
 
 // Провайдер статистики
-final statisticsProvider = FutureProvider<Statistics>((ref) async {
+final statisticsProvider = FutureProvider<Statistics?>((ref) async {
   // Спостерігаємо за оновленнями
   ref.watch(statisticsUpdateProvider);
   // Додаємо спостереження за новими котируваннями
@@ -72,7 +72,7 @@ final statisticsProvider = FutureProvider<Statistics>((ref) async {
 
   final result = await statisticsService.calculateStatistics(quotes);
   return result.fold(
-    (failure) => throw failure,
+    (failure) => null,
     (statistics) => statistics,
   );
 }, dependencies: [

@@ -22,8 +22,11 @@ class WebSocketService {
   bool _isConnected = false;
   Timer? _reconnectTimer;
   Timer? _pingTimer;
+  Timer? _throttleTimer;
   static const _reconnectDelay = Duration(seconds: 5);
   static const _pingInterval = Duration(seconds: 30);
+  static const _throttleInterval = Duration(milliseconds: 100);
+  List<Quote> _buffer = [];
 
   WebSocketService(this._databaseService, this.l10n);
 
@@ -145,7 +148,8 @@ class WebSocketService {
       }
     }
 
-    if (opcode == 1) { // Текстовий фрейм
+    if (opcode == 1) {
+      // Текстовий фрейм
       final message = utf8.decode(payload);
       log('${l10n.receivedMessage}: $message');
 
@@ -157,12 +161,22 @@ class WebSocketService {
           timestamp: DateTime.now(),
         );
 
-        _databaseService.saveQuote(quote).then(
-          (result) => result.fold(
-            (failure) => log('${l10n.saveError}: ${failure.message}'),
-            (_) => _quoteController.add(quote),
-          ),
-        );
+        _buffer.add(quote);
+
+        _throttleTimer?.cancel();
+        _throttleTimer = Timer(_throttleInterval, () {
+          if (_buffer.isNotEmpty) {
+            for (final quote in _buffer) {
+              _databaseService.saveQuote(quote).then(
+                    (result) => result.fold(
+                      (failure) => log('${l10n.saveError}: ${failure.message}'),
+                      (_) => _quoteController.add(quote),
+                    ),
+                  );
+            }
+            _buffer.clear();
+          }
+        });
       } catch (e, stackTrace) {
         log(
           '${l10n.parsingDataError}: $e',
@@ -212,6 +226,7 @@ class WebSocketService {
 
   void dispose() {
     disconnect();
+    _throttleTimer?.cancel();
     _quoteController.close();
     _connectionStatusController.close();
   }

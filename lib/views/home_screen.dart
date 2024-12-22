@@ -49,6 +49,10 @@ ${l10n.median}: ${statistics.median.toStringAsFixed(2)}
 ${l10n.lostQuotes}: ${statistics.lostQuotes}
 ''';
                 Share.share(text);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(l10n.noDataError)),
+                );
               }
             },
           ),
@@ -65,21 +69,26 @@ ${l10n.lostQuotes}: ${statistics.lostQuotes}
                 ElevatedButton(
                   onPressed: () async {
                     final websocketService = ref.read(websocketServiceProvider);
-                    final result = await websocketService.connect();
-
-                    result.fold(
-                      (failure) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(failure.message)),
-                        );
-                        ref.read(websocketConnectionProvider.notifier).state =
-                            false;
-                      },
-                      (_) {
-                        ref.read(websocketConnectionProvider.notifier).state =
-                            true;
-                      },
-                    );
+                    if (isConnected) {
+                      await websocketService.disconnect();
+                      ref.read(websocketConnectionProvider.notifier).state =
+                          false;
+                    } else {
+                      final result = await websocketService.connect();
+                      result.fold(
+                        (failure) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(failure.message)),
+                          );
+                          ref.read(websocketConnectionProvider.notifier).state =
+                              false;
+                        },
+                        (_) {
+                          ref.read(websocketConnectionProvider.notifier).state =
+                              true;
+                        },
+                      );
+                    }
                   },
                   child: Text(isConnected ? l10n.stop : l10n.start),
                 ),
@@ -127,10 +136,12 @@ ${l10n.lostQuotes}: ${statistics.lostQuotes}
                 child: Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: ref.watch(statisticsProvider).when(
-                        data: (statistics) => StatisticsTable(
-                          statistics: statistics,
-                          l10n: l10n,
-                        ),
+                        data: (statistics) => statistics != null
+                            ? StatisticsTable(
+                                statistics: statistics,
+                                l10n: l10n,
+                              )
+                            : Center(child: Text(l10n.noDataError)),
                         loading: () => Center(
                           child: Text(l10n.loading),
                         ),

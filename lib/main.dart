@@ -42,6 +42,7 @@ class MainApp extends ConsumerWidget {
           Locale('uk'),
           Locale('en'),
         ],
+        debugShowCheckedModeBanner: false,
         home: const HomeScreen(),
       ),
     );
