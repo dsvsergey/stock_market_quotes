@@ -31,6 +31,12 @@ final websocketServiceProvider = Provider<WebSocketService>((ref) {
 // Стан підключення WebSocket
 final websocketConnectionProvider = StateProvider<bool>((ref) => false);
 
+// Стан ізоляту WebSocket
+final websocketIsolateProvider = StreamProvider<bool>((ref) {
+  final websocketService = ref.watch(websocketServiceProvider);
+  return websocketService.isolateStream;
+}, dependencies: [websocketServiceProvider]);
+
 // Стрім котирувань
 final quoteStreamProvider = StreamProvider<Quote>((ref) {
   final websocketService = ref.watch(websocketServiceProvider);
@@ -54,31 +60,33 @@ final lastQuotesProvider =
 
 // Сервіс статистики
 final statisticsServiceProvider = Provider<StatisticsService>((ref) {
-  return StatisticsService(ref.watch(localizationProvider));
-}, dependencies: [localizationProvider]);
+  final l10n = ref.watch(localizationProvider);
+  final databaseService = ref.watch(databaseServiceProvider);
+  return StatisticsService(l10n, databaseService);
+}, dependencies: [localizationProvider, databaseServiceProvider]);
 
 // Контроль оновлення статистики
 final statisticsUpdateProvider = StateProvider<int>((ref) => 0);
 
 // Провайдер статистики
-final statisticsProvider = FutureProvider<Statistics?>((ref) async {
-  // Спостерігаємо за оновленнями
-  ref.watch(statisticsUpdateProvider);
-  // Додаємо спостереження за новими котируваннями
-  ref.watch(quoteStreamProvider);
-
-  final quotes = await ref.watch(allQuotesProvider.future);
+final statisticsProvider = StreamProvider<Statistics?>((ref) async* {
   final statisticsService = ref.watch(statisticsServiceProvider);
+  final databaseService = ref.watch(databaseServiceProvider);
+  final _ = ref.watch(statisticsUpdateProvider);
 
-  final result = await statisticsService.calculateStatistics(quotes);
-  return result.fold(
-    (failure) => null,
-    (statistics) => statistics,
-  );
+  await for (final quotes in databaseService.watchQuotes()) {
+    if (quotes.isEmpty) {
+      yield null;
+    } else {
+      final result = await statisticsService.calculateStatistics(quotes);
+      yield result.fold(
+        (failure) => null,
+        (statistics) => statistics,
+      );
+    }
+  }
 }, dependencies: [
   statisticsServiceProvider,
-  statisticsUpdateProvider,
-  quoteStreamProvider,
-  allQuotesProvider,
-  localizationProvider,
+  databaseServiceProvider,
+  statisticsUpdateProvider
 ]);

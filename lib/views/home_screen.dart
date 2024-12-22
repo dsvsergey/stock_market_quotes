@@ -14,6 +14,7 @@ class HomeScreen extends ConsumerWidget {
     final isConnected = ref.watch(websocketConnectionProvider);
     final isIsolateRunning = ref.watch(websocketIsolateProvider).value ?? false;
     final quotesStream = ref.watch(lastQuotesProvider(100));
+    final isCalculating = ref.watch(statisticsProvider).isLoading;
 
     return Scaffold(
       appBar: AppBar(
@@ -71,45 +72,50 @@ ${l10n.lostQuotes}: ${statistics.lostQuotes}
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 ElevatedButton(
-                  onPressed: () async {
-                    final websocketService = ref.read(websocketServiceProvider);
-                    if (isConnected) {
-                      await websocketService.disconnect();
-                      ref.read(websocketConnectionProvider.notifier).state =
-                          false;
-                    } else {
-                      final result = await websocketService.connect();
-                      result.fold(
-                        (failure) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(failure.message)),
+                  onPressed: isConnected || isCalculating
+                      ? null
+                      : () async {
+                          final websocketService =
+                              ref.read(websocketServiceProvider);
+                          final result = await websocketService.connect();
+                          result.fold(
+                            (failure) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(failure.message)),
+                              );
+                              ref
+                                  .read(websocketConnectionProvider.notifier)
+                                  .state = false;
+                            },
+                            (_) {
+                              ref
+                                  .read(websocketConnectionProvider.notifier)
+                                  .state = true;
+                            },
                           );
-                          ref.read(websocketConnectionProvider.notifier).state =
-                              false;
                         },
-                        (_) {
-                          ref.read(websocketConnectionProvider.notifier).state =
-                              true;
-                        },
-                      );
-                    }
-                  },
-                  child: Text(isConnected ? l10n.stop : l10n.start),
+                  child: Text(l10n.start),
                 ),
                 ElevatedButton(
-                  onPressed: () {
-                    ref.read(statisticsUpdateProvider.notifier).state++;
-                  },
-                  child: ref.watch(statisticsProvider).maybeWhen(
-                        loading: () => const SizedBox(
+                  onPressed: !isConnected || isCalculating
+                      ? null
+                      : () async {
+                          final websocketService =
+                              ref.read(websocketServiceProvider);
+                          await websocketService.disconnect();
+                          ref.read(websocketConnectionProvider.notifier).state =
+                              false;
+                          ref.read(statisticsUpdateProvider.notifier).state++;
+                        },
+                  child: isCalculating
+                      ? const SizedBox(
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
                           ),
-                        ),
-                        orElse: () => Text(l10n.statistics),
-                      ),
+                        )
+                      : Text(l10n.statistics),
                 ),
               ],
             ),
@@ -159,8 +165,8 @@ ${l10n.lostQuotes}: ${statistics.lostQuotes}
                                 l10n: l10n,
                               )
                             : Center(child: Text(l10n.noDataError)),
-                        loading: () => Center(
-                          child: Text(l10n.loading),
+                        loading: () => const Center(
+                          child: CircularProgressIndicator(),
                         ),
                         error: (error, stack) => Center(
                           child: Text('${l10n.error}: $error'),

@@ -4,6 +4,7 @@ import 'package:dartz/dartz.dart';
 import '../models/quote.dart';
 import '../models/statistics.dart';
 import '../l10n/app_localizations.dart';
+import '../services/database_service.dart';
 
 class StatisticsFailure {
   final String message;
@@ -12,8 +13,9 @@ class StatisticsFailure {
 
 class StatisticsService {
   final AppLocalizations l10n;
+  final DatabaseService databaseService;
 
-  StatisticsService(this.l10n);
+  StatisticsService(this.l10n, this.databaseService);
 
   Future<Either<StatisticsFailure, Statistics>> calculateStatistics(
       List<Quote> quotes) async {
@@ -23,6 +25,9 @@ class StatisticsService {
       if (quotes.isEmpty) {
         return left(StatisticsFailure(l10n.noDataError));
       }
+
+      // Позначаємо котирування як використані в розрахунках
+      await _markQuotesAsUsed(quotes);
 
       // Отримуємо всі значення
       final values = quotes.map((q) => q.value).toList();
@@ -43,46 +48,56 @@ class StatisticsService {
       final mode = _calculateMode(values);
 
       // Обчислюємо медіану
-      final median = values.length.isOdd
-          ? values[values.length ~/ 2]
-          : (values[values.length ~/ 2 - 1] + values[values.length ~/ 2]) / 2;
+      final median = _calculateMedian(values);
 
       // Обчислюємо кількість втрачених котирувань
       final lostQuotes = _calculateLostQuotes(quotes);
 
       stopwatch.stop();
 
-      return right(Statistics(
+      final statistics = Statistics.create(
         mean: mean,
         standardDeviation: standardDeviation,
         mode: mode,
         median: median,
         lostQuotes: lostQuotes,
         calculationTime: stopwatch.elapsed,
-      ));
+      );
+
+      // Зберігаємо результати
+      await databaseService.saveStatistics(statistics);
+
+      return right(statistics);
     } catch (e) {
-      return left(StatisticsFailure('${l10n.statisticsError}: $e'));
+      return left(StatisticsFailure('${l10n.calculationError}: $e'));
     }
   }
 
-  double _calculateMode(List<double> sortedValues) {
-    if (sortedValues.isEmpty) return 0;
+  Future<void> _markQuotesAsUsed(List<Quote> quotes) async {
+    for (final quote in quotes) {
+      quote.usedInCalculation = true;
+      await databaseService.updateQuote(quote);
+    }
+  }
 
-    var maxCount = 0;
+  double _calculateMode(List<double> values) {
+    if (values.isEmpty) return 0;
+
+    var mode = values[0];
+    var maxCount = 1;
+    var currentValue = values[0];
     var currentCount = 1;
-    var mode = sortedValues[0];
-    var currentValue = sortedValues[0];
 
-    for (var i = 1; i < sortedValues.length; i++) {
-      if (sortedValues[i] == currentValue) {
+    for (var i = 1; i < values.length; i++) {
+      if (values[i] == currentValue) {
         currentCount++;
       } else {
         if (currentCount > maxCount) {
           maxCount = currentCount;
           mode = currentValue;
         }
+        currentValue = values[i];
         currentCount = 1;
-        currentValue = sortedValues[i];
       }
     }
 
@@ -92,6 +107,17 @@ class StatisticsService {
     }
 
     return mode;
+  }
+
+  double _calculateMedian(List<double> values) {
+    if (values.isEmpty) return 0;
+
+    final middle = values.length ~/ 2;
+    if (values.length % 2 == 1) {
+      return values[middle];
+    } else {
+      return (values[middle - 1] + values[middle]) / 2;
+    }
   }
 
   int _calculateLostQuotes(List<Quote> quotes) {

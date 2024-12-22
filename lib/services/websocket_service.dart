@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
+import 'dart:isolate';
 import 'package:dartz/dartz.dart';
 import '../models/quote.dart';
 import 'database_service.dart';
@@ -16,7 +17,7 @@ class WebSocketFailure {
 class WebSocketService {
   Socket? _socket;
   final _quoteController = StreamController<Quote>.broadcast();
-  final _connectionStatusController = StreamController<bool>.broadcast();
+  final _isolateController = StreamController<bool>.broadcast();
   final DatabaseService _databaseService;
   final AppLocalizations l10n;
   bool _isConnected = false;
@@ -27,12 +28,17 @@ class WebSocketService {
   static const _pingInterval = Duration(seconds: 30);
   static const _throttleInterval = Duration(milliseconds: 100);
   List<Quote> _buffer = [];
+  Isolate? _isolate;
+  ReceivePort? _receivePort;
+  SendPort? _sendPort;
+  bool _shouldRun = false;
+  bool _autoReconnect = true;
 
   WebSocketService(this._databaseService, this.l10n);
 
   bool get isConnected => _isConnected;
   Stream<Quote> get quoteStream => _quoteController.stream;
-  Stream<bool> get connectionStatus => _connectionStatusController.stream;
+  Stream<bool> get isolateStream => _isolateController.stream;
 
   Future<Either<WebSocketFailure, Unit>> connect() async {
     try {
@@ -67,6 +73,10 @@ class WebSocketService {
       log('${l10n.sendingHandshake}:\n$handshake');
       _socket?.write(handshake);
 
+      _shouldRun = true;
+      _autoReconnect = true;
+      await _startIsolate();
+
       _socket?.listen(
         (List<int> data) {
           if (!_isConnected) {
@@ -74,7 +84,7 @@ class WebSocketService {
             if (response.contains('HTTP/1.1 101')) {
               log(l10n.connectionEstablished);
               _isConnected = true;
-              _connectionStatusController.add(true);
+              _isolateController.add(true);
               _startPingTimer();
             } else {
               log('${l10n.unexpectedResponse}:\n$response');
@@ -82,7 +92,7 @@ class WebSocketService {
               return;
             }
           } else {
-            _handleMessage(data);
+            _sendPort?.send(data);
           }
         },
         onError: (error, stackTrace) {
@@ -110,7 +120,46 @@ class WebSocketService {
     }
   }
 
-  void _handleMessage(List<int> data) {
+  Future<void> _startIsolate() async {
+    _receivePort = ReceivePort();
+    _isolate = await Isolate.spawn(
+      _processDataInIsolate,
+      _IsolateMessage(
+        receivePort: _receivePort!.sendPort,
+        l10n: l10n,
+      ),
+    );
+
+    _receivePort?.listen((message) {
+      if (message is SendPort) {
+        _sendPort = message;
+      } else if (message is Quote) {
+        _databaseService.saveQuote(message).then(
+              (result) => result.fold(
+                (failure) => log('${l10n.saveError}: ${failure.message}'),
+                (_) => _quoteController.add(message),
+              ),
+            );
+      }
+    });
+  }
+
+  static void _processDataInIsolate(_IsolateMessage message) {
+    final receivePort = ReceivePort();
+    message.receivePort.send(receivePort.sendPort);
+
+    receivePort.listen((data) {
+      if (data is List<int>) {
+        _handleMessage(data, message.receivePort, message.l10n);
+      }
+    });
+  }
+
+  static void _handleMessage(
+    List<int> data,
+    SendPort sendPort,
+    AppLocalizations l10n,
+  ) {
     if (data.isEmpty) return;
 
     // Перший байт - FIN і опкод
@@ -161,22 +210,7 @@ class WebSocketService {
           timestamp: DateTime.now(),
         );
 
-        _buffer.add(quote);
-
-        _throttleTimer?.cancel();
-        _throttleTimer = Timer(_throttleInterval, () {
-          if (_buffer.isNotEmpty) {
-            for (final quote in _buffer) {
-              _databaseService.saveQuote(quote).then(
-                    (result) => result.fold(
-                      (failure) => log('${l10n.saveError}: ${failure.message}'),
-                      (_) => _quoteController.add(quote),
-                    ),
-                  );
-            }
-            _buffer.clear();
-          }
-        });
+        sendPort.send(quote);
       } catch (e, stackTrace) {
         log(
           '${l10n.parsingDataError}: $e',
@@ -203,31 +237,54 @@ class WebSocketService {
 
   void _handleDisconnect() {
     _isConnected = false;
-    _connectionStatusController.add(false);
+    _isolateController.add(false);
     _socket?.destroy();
     _reconnectTimer?.cancel();
     _pingTimer?.cancel();
 
-    _reconnectTimer = Timer(_reconnectDelay, () {
-      if (!_isConnected) {
-        connect();
-      }
-    });
+    if (_autoReconnect && _shouldRun) {
+      _reconnectTimer = Timer(_reconnectDelay, () {
+        if (!_isConnected && _shouldRun) {
+          connect();
+        }
+      });
+    }
   }
 
   Future<void> disconnect() async {
+    _shouldRun = false;
+    _autoReconnect = false;
     _reconnectTimer?.cancel();
     _pingTimer?.cancel();
     _socket?.destroy();
     _isConnected = false;
-    _connectionStatusController.add(false);
+    _isolateController.add(false);
+    await _stopIsolate();
     log(l10n.connectionClosed);
+  }
+
+  Future<void> _stopIsolate() async {
+    _isolate?.kill();
+    _isolate = null;
+    _receivePort?.close();
+    _receivePort = null;
+    _sendPort = null;
   }
 
   void dispose() {
     disconnect();
     _throttleTimer?.cancel();
     _quoteController.close();
-    _connectionStatusController.close();
+    _isolateController.close();
   }
+}
+
+class _IsolateMessage {
+  final SendPort receivePort;
+  final AppLocalizations l10n;
+
+  _IsolateMessage({
+    required this.receivePort,
+    required this.l10n,
+  });
 }
