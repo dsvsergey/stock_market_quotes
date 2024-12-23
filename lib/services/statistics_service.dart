@@ -29,7 +29,11 @@ class StatisticsService {
         return left(StatisticsFailure(l10n.noDataError));
       }
 
-      await _markQuotesAsUsed(quotes);
+      final usedQuotes =
+          quotes.map((q) => q..usedInCalculation = true).toList();
+      await Future.wait(
+        usedQuotes.map((q) => databaseService.updateQuote(q)),
+      );
 
       final statistics = await _calculateInIsolate(quotes);
 
@@ -69,25 +73,50 @@ class StatisticsService {
 
   static void _calculateStatisticsIsolate(_IsolateMessage message) {
     final quotes = message.quotes;
-    final values = quotes.map((q) => q.value).toList()..sort();
 
-    // Обчислюємо середнє
-    final mean = values.reduce((a, b) => a + b) / values.length;
+    final values = List<double>.from(quotes.map((q) => q.value));
+    values.sort();
 
-    // Обчислюємо стандартне відхилення
-    final variance =
-        values.map((x) => pow(x - mean, 2)).reduce((a, b) => a + b) /
-            values.length;
+    var sum = 0.0;
+    var squareSum = 0.0;
+    var currentValue = values[0];
+    var currentCount = 1;
+    var maxCount = 1;
+    var mode = values[0];
+
+    for (var i = 1; i < values.length; i++) {
+      final value = values[i];
+      sum += value;
+      squareSum += value * value;
+
+      if (value == currentValue) {
+        currentCount++;
+        if (currentCount > maxCount) {
+          maxCount = currentCount;
+          mode = currentValue;
+        }
+      } else {
+        currentValue = value;
+        currentCount = 1;
+      }
+    }
+
+    final mean = sum / values.length;
+    final variance = (squareSum / values.length) - (mean * mean);
     final standardDeviation = sqrt(variance);
 
-    // Обчислюємо моду
-    final mode = _calculateMode(values);
+    final median = values.length.isOdd
+        ? values[values.length ~/ 2]
+        : (values[(values.length - 1) ~/ 2] + values[values.length ~/ 2]) / 2;
 
-    // Обчислюємо медіану
-    final median = _calculateMedian(values);
+    var lostQuotes = 0;
+    final sortedQuotes = List<Quote>.from(quotes)
+      ..sort((a, b) => a.quoteId.compareTo(b.quoteId));
 
-    // Обчислюємо кількість втрачених котирувань
-    final lostQuotes = _calculateLostQuotes(quotes);
+    for (var i = 1; i < sortedQuotes.length; i++) {
+      final diff = sortedQuotes[i].quoteId - sortedQuotes[i - 1].quoteId - 1;
+      if (diff > 0) lostQuotes += diff;
+    }
 
     message.sendPort.send(_StatisticsResult(
       mean: mean,
@@ -96,70 +125,6 @@ class StatisticsService {
       median: median,
       lostQuotes: lostQuotes,
     ));
-  }
-
-  Future<void> _markQuotesAsUsed(List<Quote> quotes) async {
-    for (final quote in quotes) {
-      quote.usedInCalculation = true;
-      await databaseService.updateQuote(quote);
-    }
-  }
-
-  static double _calculateMode(List<double> values) {
-    if (values.isEmpty) return 0;
-
-    var mode = values[0];
-    var maxCount = 1;
-    var currentValue = values[0];
-    var currentCount = 1;
-
-    for (var i = 1; i < values.length; i++) {
-      if (values[i] == currentValue) {
-        currentCount++;
-      } else {
-        if (currentCount > maxCount) {
-          maxCount = currentCount;
-          mode = currentValue;
-        }
-        currentValue = values[i];
-        currentCount = 1;
-      }
-    }
-
-    if (currentCount > maxCount) {
-      mode = currentValue;
-    }
-
-    return mode;
-  }
-
-  static double _calculateMedian(List<double> values) {
-    if (values.isEmpty) return 0;
-
-    final middle = values.length ~/ 2;
-    if (values.length % 2 == 1) {
-      return values[middle];
-    } else {
-      return (values[middle - 1] + values[middle]) / 2;
-    }
-  }
-
-  static int _calculateLostQuotes(List<Quote> quotes) {
-    if (quotes.isEmpty) return 0;
-
-    final sortedQuotes = List<Quote>.from(quotes)
-      ..sort((a, b) => a.quoteId.compareTo(b.quoteId));
-
-    var lostCount = 0;
-    for (var i = 1; i < sortedQuotes.length; i++) {
-      final expectedId = sortedQuotes[i - 1].quoteId + 1;
-      final actualId = sortedQuotes[i].quoteId;
-      if (actualId > expectedId) {
-        lostCount += actualId - expectedId;
-      }
-    }
-
-    return lostCount;
   }
 }
 

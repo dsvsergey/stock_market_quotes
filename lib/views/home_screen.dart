@@ -19,6 +19,8 @@ class HomeScreen extends ConsumerWidget {
     ref.watch(lastQuotesProvider(100));
     final isCalculating = ref.watch(statisticsProvider).isLoading;
 
+    final connectionColor = _getConnectionColor(isConnected, isIsolateRunning);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -30,8 +32,10 @@ class HomeScreen extends ConsumerWidget {
         ),
         actions: [
           _buildStatusIcon(
-            icon: isConnected ? Icons.cloud_done : Icons.cloud_off,
-            color: isConnected ? Colors.greenAccent : Colors.redAccent,
+            icon: isConnected
+                ? (isIsolateRunning ? Icons.cloud_done : Icons.cloud_sync)
+                : Icons.cloud_off,
+            color: connectionColor,
             theme: theme,
           ),
           const SizedBox(width: 8),
@@ -177,12 +181,32 @@ class HomeScreen extends ConsumerWidget {
   }) {
     return Container(
       padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: color.withOpacity(0.5),
+          width: 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.3),
+            blurRadius: 8,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
       child: Icon(
         icon,
         color: color,
         size: 24,
       ),
     );
+  }
+
+  Color _getConnectionColor(bool isConnected, bool isIsolateRunning) {
+    if (!isConnected) return Colors.redAccent;
+    if (isConnected && !isIsolateRunning) return Colors.orangeAccent;
+    return Colors.greenAccent;
   }
 
   Widget _buildActionButton({
