@@ -3,10 +3,12 @@ import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
 import 'dart:isolate';
+
 import 'package:dartz/dartz.dart';
+
+import '../l10n/app_localizations.dart';
 import '../models/quote.dart';
 import 'database_service.dart';
-import '../l10n/app_localizations.dart';
 
 class WebSocketFailure {
   final String message;
@@ -26,8 +28,6 @@ class WebSocketService {
   Timer? _throttleTimer;
   static const _reconnectDelay = Duration(seconds: 5);
   static const _pingInterval = Duration(seconds: 30);
-  static const _throttleInterval = Duration(milliseconds: 100);
-  List<Quote> _buffer = [];
   Isolate? _isolate;
   ReceivePort? _receivePort;
   SendPort? _sendPort;
@@ -164,7 +164,6 @@ class WebSocketService {
 
     // Перший байт - FIN і опкод
     final byte1 = data[0];
-    final fin = (byte1 & 0x80) != 0;
     final opcode = byte1 & 0x0F;
 
     // Другий байт - маска і довжина

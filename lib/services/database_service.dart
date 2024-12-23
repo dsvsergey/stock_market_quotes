@@ -1,9 +1,10 @@
+import 'package:dartz/dartz.dart';
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:dartz/dartz.dart';
+
+import '../l10n/app_localizations.dart';
 import '../models/quote.dart';
 import '../models/statistics.dart';
-import '../l10n/app_localizations.dart';
 
 class DatabaseFailure {
   final String message;

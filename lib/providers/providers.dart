@@ -1,10 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../l10n/app_localizations.dart';
 import '../models/quote.dart';
 import '../models/statistics.dart';
 import '../services/database_service.dart';
-import '../services/websocket_service.dart';
 import '../services/statistics_service.dart';
-import '../l10n/app_localizations.dart';
+import '../services/websocket_service.dart';
 
 // Провайдер для локалізації
 final localizationProvider = Provider<AppLocalizations>((ref) {

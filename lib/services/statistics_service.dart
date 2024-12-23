@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:isolate';
 import 'dart:math';
+
 import 'package:dartz/dartz.dart';
+
+import '../l10n/app_localizations.dart';
 import '../models/quote.dart';
 import '../models/statistics.dart';
-import '../l10n/app_localizations.dart';
 import '../services/database_service.dart';
 
 class StatisticsFailure {
@@ -27,10 +29,8 @@ class StatisticsService {
         return left(StatisticsFailure(l10n.noDataError));
       }
 
-      // Позначаємо котирування як використані в розрахунках
       await _markQuotesAsUsed(quotes);
 
-      // Виконуємо розрахунки в ізоляті
       final statistics = await _calculateInIsolate(quotes);
 
       stopwatch.stop();
@@ -44,7 +44,6 @@ class StatisticsService {
         calculationTime: stopwatch.elapsed,
       );
 
-      // Зберігаємо результати
       await databaseService.saveStatistics(result);
 
       return right(result);
@@ -127,7 +126,6 @@ class StatisticsService {
       }
     }
 
-    // Перевіряємо останню групу
     if (currentCount > maxCount) {
       mode = currentValue;
     }
@@ -149,7 +147,6 @@ class StatisticsService {
   static int _calculateLostQuotes(List<Quote> quotes) {
     if (quotes.isEmpty) return 0;
 
-    // Сортуємо за ID
     final sortedQuotes = List<Quote>.from(quotes)
       ..sort((a, b) => a.quoteId.compareTo(b.quoteId));
 
