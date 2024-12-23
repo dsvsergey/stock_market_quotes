@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:isolate';
 import 'dart:math';
 import 'package:dartz/dartz.dart';
 import '../models/quote.dart';
@@ -29,48 +30,73 @@ class StatisticsService {
       // Позначаємо котирування як використані в розрахунках
       await _markQuotesAsUsed(quotes);
 
-      // Отримуємо всі значення
-      final values = quotes.map((q) => q.value).toList();
-
-      // Сортуємо для обчислення медіани та моди
-      values.sort();
-
-      // Обчислюємо середнє
-      final mean = values.reduce((a, b) => a + b) / values.length;
-
-      // Обчислюємо стандартне відхилення
-      final variance =
-          values.map((x) => pow(x - mean, 2)).reduce((a, b) => a + b) /
-              values.length;
-      final standardDeviation = sqrt(variance);
-
-      // Обчислюємо моду
-      final mode = _calculateMode(values);
-
-      // Обчислюємо медіану
-      final median = _calculateMedian(values);
-
-      // Обчислюємо кількість втрачених котирувань
-      final lostQuotes = _calculateLostQuotes(quotes);
+      // Виконуємо розрахунки в ізоляті
+      final statistics = await _calculateInIsolate(quotes);
 
       stopwatch.stop();
 
-      final statistics = Statistics.create(
-        mean: mean,
-        standardDeviation: standardDeviation,
-        mode: mode,
-        median: median,
-        lostQuotes: lostQuotes,
+      final result = Statistics.create(
+        mean: statistics.mean,
+        standardDeviation: statistics.standardDeviation,
+        mode: statistics.mode,
+        median: statistics.median,
+        lostQuotes: statistics.lostQuotes,
         calculationTime: stopwatch.elapsed,
       );
 
       // Зберігаємо результати
-      await databaseService.saveStatistics(statistics);
+      await databaseService.saveStatistics(result);
 
-      return right(statistics);
+      return right(result);
     } catch (e) {
       return left(StatisticsFailure('${l10n.calculationError}: $e'));
     }
+  }
+
+  Future<_StatisticsResult> _calculateInIsolate(List<Quote> quotes) async {
+    final receivePort = ReceivePort();
+    await Isolate.spawn(
+      _calculateStatisticsIsolate,
+      _IsolateMessage(
+        quotes: quotes,
+        sendPort: receivePort.sendPort,
+      ),
+    );
+
+    final result = await receivePort.first as _StatisticsResult;
+    receivePort.close();
+    return result;
+  }
+
+  static void _calculateStatisticsIsolate(_IsolateMessage message) {
+    final quotes = message.quotes;
+    final values = quotes.map((q) => q.value).toList()..sort();
+
+    // Обчислюємо середнє
+    final mean = values.reduce((a, b) => a + b) / values.length;
+
+    // Обчислюємо стандартне відхилення
+    final variance =
+        values.map((x) => pow(x - mean, 2)).reduce((a, b) => a + b) /
+            values.length;
+    final standardDeviation = sqrt(variance);
+
+    // Обчислюємо моду
+    final mode = _calculateMode(values);
+
+    // Обчислюємо медіану
+    final median = _calculateMedian(values);
+
+    // Обчислюємо кількість втрачених котирувань
+    final lostQuotes = _calculateLostQuotes(quotes);
+
+    message.sendPort.send(_StatisticsResult(
+      mean: mean,
+      standardDeviation: standardDeviation,
+      mode: mode,
+      median: median,
+      lostQuotes: lostQuotes,
+    ));
   }
 
   Future<void> _markQuotesAsUsed(List<Quote> quotes) async {
@@ -80,7 +106,7 @@ class StatisticsService {
     }
   }
 
-  double _calculateMode(List<double> values) {
+  static double _calculateMode(List<double> values) {
     if (values.isEmpty) return 0;
 
     var mode = values[0];
@@ -109,7 +135,7 @@ class StatisticsService {
     return mode;
   }
 
-  double _calculateMedian(List<double> values) {
+  static double _calculateMedian(List<double> values) {
     if (values.isEmpty) return 0;
 
     final middle = values.length ~/ 2;
@@ -120,7 +146,7 @@ class StatisticsService {
     }
   }
 
-  int _calculateLostQuotes(List<Quote> quotes) {
+  static int _calculateLostQuotes(List<Quote> quotes) {
     if (quotes.isEmpty) return 0;
 
     // Сортуємо за ID
@@ -138,4 +164,30 @@ class StatisticsService {
 
     return lostCount;
   }
+}
+
+class _IsolateMessage {
+  final List<Quote> quotes;
+  final SendPort sendPort;
+
+  _IsolateMessage({
+    required this.quotes,
+    required this.sendPort,
+  });
+}
+
+class _StatisticsResult {
+  final double mean;
+  final double standardDeviation;
+  final double mode;
+  final double median;
+  final int lostQuotes;
+
+  _StatisticsResult({
+    required this.mean,
+    required this.standardDeviation,
+    required this.mode,
+    required this.median,
+    required this.lostQuotes,
+  });
 }

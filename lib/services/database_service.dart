@@ -74,10 +74,14 @@ class DatabaseService {
     }
   }
 
-  Future<Either<DatabaseFailure, List<Quote>>> getAllQuotes() async {
+  Future<Either<DatabaseFailure, List<Quote>>> getLastQuotes(int limit) async {
     try {
       final isar = await db;
-      final quotes = await isar.quotes.where().findAll();
+      final quotes = await isar.quotes
+          .where()
+          .sortByTimestampDesc()
+          .limit(limit)
+          .findAll();
       return right(quotes);
     } catch (e) {
       return left(DatabaseFailure('${l10n.getQuotesError}: $e'));
@@ -94,6 +98,7 @@ class DatabaseService {
       final isar = await db;
       await isar.writeTxn(() async {
         await isar.quotes.clear();
+        await isar.statistics.clear();
       });
       return right(unit);
     } catch (e) {

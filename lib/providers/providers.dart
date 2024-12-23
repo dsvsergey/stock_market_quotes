@@ -43,12 +43,6 @@ final quoteStreamProvider = StreamProvider<Quote>((ref) {
   return websocketService.quoteStream;
 }, dependencies: [websocketServiceProvider]);
 
-// Всі котирування з бази даних
-final allQuotesProvider = StreamProvider<List<Quote>>((ref) {
-  final databaseService = ref.watch(databaseServiceProvider);
-  return databaseService.watchQuotes();
-}, dependencies: [databaseServiceProvider]);
-
 // Останні N котирувань
 final lastQuotesProvider =
     StreamProvider.family<List<Quote>, int>((ref, count) async* {
@@ -69,22 +63,26 @@ final statisticsServiceProvider = Provider<StatisticsService>((ref) {
 final statisticsUpdateProvider = StateProvider<int>((ref) => 0);
 
 // Провайдер статистики
-final statisticsProvider = StreamProvider<Statistics?>((ref) async* {
+final statisticsProvider = FutureProvider<Statistics?>((ref) async {
   final statisticsService = ref.watch(statisticsServiceProvider);
   final databaseService = ref.watch(databaseServiceProvider);
   final _ = ref.watch(statisticsUpdateProvider);
 
-  await for (final quotes in databaseService.watchQuotes()) {
-    if (quotes.isEmpty) {
-      yield null;
-    } else {
+  // Отримуємо останні 1000 котирувань
+  final quotesResult = await databaseService.getLastQuotes(1000);
+
+  return quotesResult.fold(
+    (failure) => null,
+    (quotes) async {
+      if (quotes.isEmpty) return null;
+
       final result = await statisticsService.calculateStatistics(quotes);
-      yield result.fold(
+      return result.fold(
         (failure) => null,
         (statistics) => statistics,
       );
-    }
-  }
+    },
+  );
 }, dependencies: [
   statisticsServiceProvider,
   databaseServiceProvider,

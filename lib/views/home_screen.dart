@@ -41,26 +41,6 @@ class HomeScreen extends ConsumerWidget {
               );
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.share),
-            onPressed: () {
-              final statistics = ref.read(statisticsProvider).value;
-              if (statistics != null) {
-                final text = '''
-${l10n.mean}: ${statistics.mean.toStringAsFixed(2)}
-${l10n.standardDeviation}: ${statistics.standardDeviation.toStringAsFixed(2)}
-${l10n.mode}: ${statistics.mode.toStringAsFixed(2)}
-${l10n.median}: ${statistics.median.toStringAsFixed(2)}
-${l10n.lostQuotes}: ${statistics.lostQuotes}
-''';
-                Share.share(text);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(l10n.noDataError)),
-                );
-              }
-            },
-          ),
           const SizedBox(width: 16),
         ],
       ),
@@ -105,7 +85,12 @@ ${l10n.lostQuotes}: ${statistics.lostQuotes}
                           await websocketService.disconnect();
                           ref.read(websocketConnectionProvider.notifier).state =
                               false;
+
+                          // Спочатку оновлюємо статистику
                           ref.read(statisticsUpdateProvider.notifier).state++;
+
+                          // Чекаємо завершення розрахунків
+                          await ref.read(statisticsProvider.future);
                         },
                   child: isCalculating
                       ? const SizedBox(
@@ -118,39 +103,6 @@ ${l10n.lostQuotes}: ${statistics.lostQuotes}
                       : Text(l10n.statistics),
                 ),
               ],
-            ),
-            const SizedBox(height: 20),
-            Expanded(
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: quotesStream.when(
-                    data: (quotes) => ListView.builder(
-                      itemCount: quotes.length,
-                      itemBuilder: (context, index) {
-                        final quote = quotes[index];
-                        return ListTile(
-                          title:
-                              Text('Value: ${quote.value.toStringAsFixed(2)}'),
-                          subtitle: Text(
-                            'Time: ${quote.timestamp.toLocal().toString().split('.')[0]}',
-                          ),
-                          trailing: quote.usedInCalculation
-                              ? const Icon(Icons.check_circle,
-                                  color: Colors.green)
-                              : null,
-                        );
-                      },
-                    ),
-                    loading: () => Center(
-                      child: Text(l10n.loading),
-                    ),
-                    error: (error, stack) => Center(
-                      child: Text('${l10n.error}: $error'),
-                    ),
-                  ),
-                ),
-              ),
             ),
             const SizedBox(height: 20),
             SizedBox(
