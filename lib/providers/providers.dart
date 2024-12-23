@@ -7,6 +7,8 @@ import '../services/database_service.dart';
 import '../services/statistics_service.dart';
 import '../services/websocket_service.dart';
 
+enum WebSocketState { disconnected, connecting, receiving }
+
 // Провайдер для локалізації
 final localizationProvider = Provider<AppLocalizations>((ref) {
   throw UnimplementedError('Needs to be overridden in the widget tree');
@@ -30,7 +32,8 @@ final websocketServiceProvider = Provider<WebSocketService>((ref) {
 }, dependencies: [databaseServiceProvider, localizationProvider]);
 
 // Стан підключення WebSocket
-final websocketConnectionProvider = StateProvider<bool>((ref) => false);
+final connectionStateProvider =
+    StateProvider<WebSocketState>((ref) => WebSocketState.disconnected);
 
 // Стан ізоляту WebSocket
 final websocketIsolateProvider = StreamProvider<bool>((ref) {

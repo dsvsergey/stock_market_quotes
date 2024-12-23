@@ -61,12 +61,9 @@ class WebSocketService {
           'Connection: Upgrade\r\n'
           'Pragma: no-cache\r\n'
           'Cache-Control: no-cache\r\n'
-          'User-Agent: Python/3.10 websockets/14.1\r\n'
           'Upgrade: websocket\r\n'
           'Origin: https://trade.termplat.com\r\n'
           'Sec-WebSocket-Version: 13\r\n'
-          'Accept-Encoding: gzip, deflate\r\n'
-          'Accept-Language: en-US,en;q=0.9\r\n'
           'Sec-WebSocket-Key: $key\r\n'
           'Sec-WebSocket-Extensions: permessage-deflate; client_max_window_bits\r\n\r\n';
 

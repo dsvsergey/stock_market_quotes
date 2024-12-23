@@ -8,18 +8,24 @@ import '../providers/providers.dart';
 import 'statistics_table.dart';
 
 class HomeScreen extends ConsumerWidget {
-  const HomeScreen({super.key});
+  final String windowTitle;
+
+  const HomeScreen({
+    super.key,
+    required this.windowTitle,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    final isConnected = ref.watch(websocketConnectionProvider);
+    final connectionState = ref.watch(connectionStateProvider);
     final isIsolateRunning = ref.watch(websocketIsolateProvider).value ?? false;
     ref.watch(lastQuotesProvider(100));
     final isCalculating = ref.watch(statisticsProvider).isLoading;
 
-    final connectionColor = _getConnectionColor(isConnected, isIsolateRunning);
+    final connectionColor = _getConnectionColor(connectionState);
+    final connectionIcon = _getConnectionIcon(connectionState);
 
     return Scaffold(
       appBar: AppBar(
@@ -32,9 +38,7 @@ class HomeScreen extends ConsumerWidget {
         ),
         actions: [
           _buildStatusIcon(
-            icon: isConnected
-                ? (isIsolateRunning ? Icons.cloud_done : Icons.cloud_sync)
-                : Icons.cloud_off,
+            icon: connectionIcon,
             color: connectionColor,
             theme: theme,
           ),
@@ -44,6 +48,7 @@ class HomeScreen extends ConsumerWidget {
             color: isIsolateRunning ? Colors.greenAccent : Colors.redAccent,
             theme: theme,
           ),
+          const SizedBox(width: 18),
           IconButton(
             icon: Icon(
               Icons.delete_outline,
@@ -87,8 +92,11 @@ class HomeScreen extends ConsumerWidget {
                   _buildActionButton(
                     context: context,
                     label: l10n.start,
-                    isEnabled: !isConnected && !isCalculating,
+                    isEnabled: connectionState == WebSocketState.disconnected &&
+                        !isCalculating,
                     onPressed: () async {
+                      ref.read(connectionStateProvider.notifier).state =
+                          WebSocketState.connecting;
                       final websocketService =
                           ref.read(websocketServiceProvider);
                       final result = await websocketService.connect();
@@ -100,12 +108,12 @@ class HomeScreen extends ConsumerWidget {
                               backgroundColor: theme.colorScheme.error,
                             ),
                           );
-                          ref.read(websocketConnectionProvider.notifier).state =
-                              false;
+                          ref.read(connectionStateProvider.notifier).state =
+                              WebSocketState.disconnected;
                         },
                         (_) {
-                          ref.read(websocketConnectionProvider.notifier).state =
-                              true;
+                          ref.read(connectionStateProvider.notifier).state =
+                              WebSocketState.receiving;
                         },
                       );
                     },
@@ -113,14 +121,15 @@ class HomeScreen extends ConsumerWidget {
                   _buildActionButton(
                     context: context,
                     label: l10n.statistics,
-                    isEnabled: isConnected && !isCalculating,
+                    isEnabled: connectionState != WebSocketState.disconnected &&
+                        !isCalculating,
                     isLoading: isCalculating,
                     onPressed: () async {
                       final websocketService =
                           ref.read(websocketServiceProvider);
                       await websocketService.disconnect();
-                      ref.read(websocketConnectionProvider.notifier).state =
-                          false;
+                      ref.read(connectionStateProvider.notifier).state =
+                          WebSocketState.disconnected;
                       ref.read(statisticsUpdateProvider.notifier).state++;
                       await ref.read(statisticsProvider.future);
                     },
@@ -203,10 +212,26 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Color _getConnectionColor(bool isConnected, bool isIsolateRunning) {
-    if (!isConnected) return Colors.redAccent;
-    if (isConnected && !isIsolateRunning) return Colors.orangeAccent;
-    return Colors.greenAccent;
+  Color _getConnectionColor(WebSocketState state) {
+    switch (state) {
+      case WebSocketState.disconnected:
+        return Colors.redAccent;
+      case WebSocketState.connecting:
+        return Colors.orangeAccent;
+      case WebSocketState.receiving:
+        return Colors.greenAccent;
+    }
+  }
+
+  IconData _getConnectionIcon(WebSocketState state) {
+    switch (state) {
+      case WebSocketState.disconnected:
+        return Icons.cloud_off;
+      case WebSocketState.connecting:
+        return Icons.cloud_sync;
+      case WebSocketState.receiving:
+        return Icons.cloud_done;
+    }
   }
 
   Widget _buildActionButton({

@@ -11,6 +11,7 @@ class AppLocalizations {
 
   static const _localizedValues = {
     'uk': {
+      'windowTitle': 'Біржові котирування',
       'appTitle': 'Торгова Статистика',
       'start': 'Старт',
       'stop': 'Стоп',
@@ -56,6 +57,7 @@ class AppLocalizations {
       'pingError': 'Помилка відправки ping',
     },
     'en': {
+      'windowTitle': 'Stock Market Quotes',
       'appTitle': 'Trade Statistics',
       'start': 'Start',
       'stop': 'Stop',
@@ -101,6 +103,8 @@ class AppLocalizations {
     },
   };
 
+  String get windowTitle =>
+      _localizedValues[locale.languageCode]!['windowTitle']!;
   String get appTitle => _localizedValues[locale.languageCode]!['appTitle']!;
   String get start => _localizedValues[locale.languageCode]!['start']!;
   String get stop => _localizedValues[locale.languageCode]!['stop']!;
