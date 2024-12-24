@@ -9,10 +9,12 @@ import 'statistics_table.dart';
 
 class HomeScreen extends ConsumerWidget {
   final String windowTitle;
+  final BoxConstraints constraints;
 
   const HomeScreen({
     super.key,
     required this.windowTitle,
+    required this.constraints,
   });
 
   @override
@@ -95,50 +97,59 @@ class HomeScreen extends ConsumerWidget {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: ProviderScope(
-                      child: Consumer(
-                        builder: (context, ref, child) {
-                          final statisticsAsync = ref.watch(statisticsProvider);
-                          return AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 300),
-                            child: statisticsAsync.when(
-                              data: (statistics) => statistics != null
-                                  ? Padding(
-                                      key: ValueKey(
-                                          'statistics_${statistics.calculatedAt.millisecondsSinceEpoch}'),
-                                      padding: const EdgeInsets.all(16.0),
-                                      child: StatisticsTable(
-                                        statistics: statistics,
-                                        l10n: l10n,
-                                      ),
-                                    )
-                                  : Center(
-                                      key: const ValueKey('no_data'),
-                                      child: Text(
-                                        l10n.noDataError,
-                                        style: theme.textTheme.titleMedium
-                                            ?.copyWith(
-                                          color: theme.colorScheme.onSurface
-                                              .withOpacity(0.6),
+                  child: SingleChildScrollView(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight - 200,
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: ProviderScope(
+                          child: Consumer(
+                            builder: (context, ref, child) {
+                              final statisticsAsync =
+                                  ref.watch(statisticsProvider);
+                              return AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 300),
+                                child: statisticsAsync.when(
+                                  data: (statistics) => statistics != null
+                                      ? Padding(
+                                          key: ValueKey(
+                                              'statistics_${statistics.calculatedAt.millisecondsSinceEpoch}'),
+                                          padding: const EdgeInsets.all(16.0),
+                                          child: StatisticsTable(
+                                            statistics: statistics,
+                                            l10n: l10n,
+                                          ),
+                                        )
+                                      : Center(
+                                          key: const ValueKey('no_data'),
+                                          child: Text(
+                                            l10n.noDataError,
+                                            style: theme.textTheme.titleMedium
+                                                ?.copyWith(
+                                              color: theme.colorScheme.onSurface
+                                                  .withOpacity(0.6),
+                                            ),
+                                          ),
                                         ),
+                                  loading: () => const SizedBox.shrink(
+                                      key: ValueKey('loading')),
+                                  error: (error, stack) => Center(
+                                    key: ValueKey('error_$error'),
+                                    child: Text(
+                                      '${l10n.error}: $error',
+                                      style:
+                                          theme.textTheme.titleMedium?.copyWith(
+                                        color: theme.colorScheme.error,
                                       ),
                                     ),
-                              loading: () => const SizedBox.shrink(
-                                  key: ValueKey('loading')),
-                              error: (error, stack) => Center(
-                                key: ValueKey('error_$error'),
-                                child: Text(
-                                  '${l10n.error}: $error',
-                                  style: theme.textTheme.titleMedium?.copyWith(
-                                    color: theme.colorScheme.error,
                                   ),
                                 ),
-                              ),
-                            ),
-                          );
-                        },
+                              );
+                            },
+                          ),
+                        ),
                       ),
                     ),
                   ),

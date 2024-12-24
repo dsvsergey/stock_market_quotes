@@ -1,15 +1,24 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'views/home_screen.dart';
-import 'l10n/app_localizations_delegate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:io';
+import 'package:window_size/window_size.dart';
+
 import 'l10n/app_localizations.dart';
+import 'l10n/app_localizations_delegate.dart';
 import 'providers/providers.dart';
+import 'views/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Встановлюємо мінімальні розміри вікна
+  if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
+    setWindowMinSize(const Size(600, 800));
+    setWindowTitle('Stock Market Quotes (Test App)');
+  }
 
   runApp(
     const ProviderScope(
@@ -77,7 +86,12 @@ class MainApp extends ConsumerWidget {
               Locale('en'),
             ],
             debugShowCheckedModeBanner: false,
-            home: HomeScreen(windowTitle: l10n.windowTitle),
+            home: LayoutBuilder(
+              builder: (context, constraints) => HomeScreen(
+                windowTitle: l10n.windowTitle,
+                constraints: constraints,
+              ),
+            ),
           );
         },
       ),
