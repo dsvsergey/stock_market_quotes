@@ -18,14 +18,13 @@ class StatisticsTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
     return Container(
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withOpacity(0.1),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -44,23 +43,21 @@ class StatisticsTable extends StatelessWidget {
             1: FlexColumnWidth(1.0),
           },
           children: [
-            _buildHeaderRow(theme),
-            _buildRow(l10n.mean, statistics.mean.toStringAsFixed(2), theme),
-            _buildRow(l10n.standardDeviation,
+            _buildHeaderRow(theme, l10n),
+            _buildDataRow(l10n.mean, statistics.mean.toStringAsFixed(2), theme),
+            _buildDataRow(l10n.standardDeviation,
                 statistics.standardDeviation.toStringAsFixed(2), theme),
-            _buildRow(l10n.mode, statistics.mode.toStringAsFixed(2), theme),
-            _buildRow(l10n.median, statistics.median.toStringAsFixed(2), theme),
-            _buildRow(l10n.lostQuotes, statistics.lostQuotes.toString(), theme,
-                valueColor: statistics.lostQuotes > 0
-                    ? Colors.redAccent
-                    : Colors.greenAccent),
-            _buildRow(
+            _buildDataRow(l10n.mode, statistics.mode.toStringAsFixed(2), theme),
+            _buildDataRow(
+                l10n.median, statistics.median.toStringAsFixed(2), theme),
+            _buildDataRow(
+                l10n.lostQuotes, statistics.lostQuotes.toString(), theme,
+                valueColor: theme.colorScheme.error),
+            _buildDataRow(
               l10n.calculationTime,
               '${statistics.calculationTime.inMilliseconds} ${l10n.milliseconds}',
               theme,
-              valueColor: statistics.calculationTime.inMilliseconds > 100
-                  ? Colors.orangeAccent
-                  : Colors.greenAccent,
+              valueColor: theme.colorScheme.tertiary,
             ),
           ],
         ),
@@ -68,7 +65,7 @@ class StatisticsTable extends StatelessWidget {
     );
   }
 
-  TableRow _buildHeaderRow(ThemeData theme) {
+  TableRow _buildHeaderRow(ThemeData theme, AppLocalizations l10n) {
     return TableRow(
       decoration: BoxDecoration(
         color: theme.colorScheme.primary.withOpacity(0.1),
@@ -94,23 +91,23 @@ class StatisticsTable extends StatelessWidget {
     );
   }
 
-  TableRow _buildRow(String label, String value, ThemeData theme,
+  TableRow _buildDataRow(String label, String value, ThemeData theme,
       {Color? valueColor}) {
     return TableRow(
       children: [
         _buildCell(
           label,
           theme,
-          textStyle: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.onSurface.withOpacity(0.8),
+          textStyle: theme.textTheme.titleMedium?.copyWith(
+            color: theme.colorScheme.onSurface.withOpacity(0.7),
           ),
         ),
         _buildCell(
           value,
           theme,
-          textStyle: theme.textTheme.bodyMedium?.copyWith(
+          textStyle: theme.textTheme.titleMedium?.copyWith(
             color: valueColor ?? theme.colorScheme.onSurface,
-            fontWeight: FontWeight.w500,
+            fontFeatures: const [FontFeature.tabularFigures()],
           ),
         ),
       ],
@@ -123,14 +120,9 @@ class StatisticsTable extends StatelessWidget {
         vertical: 16.0,
         horizontal: 20.0,
       ),
-      alignment: Alignment.centerLeft,
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 300),
-        child: Text(
-          text,
-          key: ValueKey(text),
-          style: textStyle ?? theme.textTheme.bodyMedium,
-        ),
+      child: Text(
+        text,
+        style: textStyle ?? theme.textTheme.bodyMedium,
       ),
     );
   }

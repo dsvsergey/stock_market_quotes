@@ -60,8 +60,13 @@ final lastQuotesProvider =
 final statisticsServiceProvider = Provider<StatisticsService>((ref) {
   final l10n = ref.watch(localizationProvider);
   final databaseService = ref.watch(databaseServiceProvider);
-  return StatisticsService(l10n, databaseService);
-}, dependencies: [localizationProvider, databaseServiceProvider]);
+  final websocketService = ref.watch(websocketServiceProvider);
+  return StatisticsService(l10n, databaseService, websocketService);
+}, dependencies: [
+  localizationProvider,
+  databaseServiceProvider,
+  websocketServiceProvider
+]);
 
 // Контроль оновлення статистики
 final statisticsUpdateProvider = StateProvider<int>((ref) => 0);
@@ -69,29 +74,18 @@ final statisticsUpdateProvider = StateProvider<int>((ref) => 0);
 // Провайдер статистики
 final statisticsProvider = FutureProvider<Statistics?>((ref) async {
   final statisticsService = ref.watch(statisticsServiceProvider);
-  final databaseService = ref.watch(databaseServiceProvider);
-  final startTime = ref.watch(startTimeProvider);
   final _ = ref.watch(statisticsUpdateProvider);
+  final startTime = ref.watch(startTimeProvider);
 
   if (startTime == null) return null;
 
-  final quotesResult = await databaseService.getQuotesSinceStart(startTime);
-
-  return quotesResult.fold(
+  final result = await statisticsService.calculateStatistics();
+  return result.fold(
     (failure) => null,
-    (quotes) async {
-      if (quotes.isEmpty) return null;
-
-      final result = await statisticsService.calculateStatistics(quotes);
-      return result.fold(
-        (failure) => null,
-        (statistics) => statistics,
-      );
-    },
+    (statistics) => statistics,
   );
 }, dependencies: [
   statisticsServiceProvider,
-  databaseServiceProvider,
   statisticsUpdateProvider,
   startTimeProvider
 ]);

@@ -9,10 +9,10 @@ class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations)!;
   }
 
-  static const _localizedValues = {
+  static final Map<String, Map<String, String>> _localizedValues = {
     'uk': {
       'windowTitle': 'Біржові котирування',
-      'appTitle': 'Торгова Статистика',
+      'appTitle': 'Торгова статистика',
       'start': 'Старт',
       'stop': 'Стоп',
       'statistics': 'Статистика',

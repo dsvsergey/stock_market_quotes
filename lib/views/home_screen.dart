@@ -20,9 +20,7 @@ class HomeScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final connectionState = ref.watch(connectionStateProvider);
-    final isIsolateRunning = ref.watch(websocketIsolateProvider).value ?? false;
     ref.watch(lastQuotesProvider(100));
-    final isCalculating = ref.watch(statisticsProvider).isLoading;
 
     final connectionColor = _getConnectionColor(connectionState);
     final connectionIcon = _getConnectionIcon(connectionState);
@@ -40,12 +38,6 @@ class HomeScreen extends ConsumerWidget {
           _buildStatusIcon(
             icon: connectionIcon,
             color: connectionColor,
-            theme: theme,
-          ),
-          const SizedBox(width: 8),
-          _buildStatusIcon(
-            icon: isIsolateRunning ? Icons.memory : Icons.memory_outlined,
-            color: isIsolateRunning ? Colors.greenAccent : Colors.redAccent,
             theme: theme,
           ),
           const SizedBox(width: 18),
@@ -89,58 +81,11 @@ class HomeScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(16.0),
           child: Column(
             children: [
-              Row(
+              const Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _buildActionButton(
-                    context: context,
-                    label: l10n.start,
-                    isEnabled: connectionState == WebSocketState.disconnected &&
-                        !isCalculating,
-                    onPressed: () async {
-                      ref.read(connectionStateProvider.notifier).state =
-                          WebSocketState.connecting;
-                      final websocketService =
-                          ref.read(websocketServiceProvider);
-                      final result = await websocketService.connect();
-                      result.fold(
-                        (failure) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(failure.message),
-                              backgroundColor: theme.colorScheme.error,
-                            ),
-                          );
-                          ref.read(connectionStateProvider.notifier).state =
-                              WebSocketState.disconnected;
-                        },
-                        (_) {
-                          ref.read(connectionStateProvider.notifier).state =
-                              WebSocketState.receiving;
-                          if (ref.read(startTimeProvider) == null) {
-                            ref.read(startTimeProvider.notifier).state =
-                                DateTime.now();
-                          }
-                        },
-                      );
-                    },
-                  ),
-                  _buildActionButton(
-                    context: context,
-                    label: l10n.statistics,
-                    isEnabled: connectionState != WebSocketState.disconnected &&
-                        !isCalculating,
-                    isLoading: isCalculating,
-                    onPressed: () async {
-                      final websocketService =
-                          ref.read(websocketServiceProvider);
-                      await websocketService.disconnect();
-                      ref.read(connectionStateProvider.notifier).state =
-                          WebSocketState.disconnected;
-                      ref.read(statisticsUpdateProvider.notifier).state++;
-                      await ref.read(statisticsProvider.future);
-                    },
-                  ),
+                  StartStopButton(),
+                  StatisticsButton(),
                 ],
               ),
               const SizedBox(height: 24),
@@ -152,34 +97,50 @@ class HomeScreen extends ConsumerWidget {
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
-                    child: ref.watch(statisticsProvider).when(
-                          data: (statistics) => statistics != null
-                              ? StatisticsTable(
-                                  statistics: statistics,
-                                  l10n: l10n,
-                                )
-                              : Center(
-                                  child: Text(
-                                    l10n.noDataError,
-                                    style:
-                                        theme.textTheme.titleMedium?.copyWith(
-                                      color: theme.colorScheme.onSurface
-                                          .withOpacity(0.6),
+                    child: ProviderScope(
+                      child: Consumer(
+                        builder: (context, ref, child) {
+                          final statisticsAsync = ref.watch(statisticsProvider);
+                          return AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 300),
+                            child: statisticsAsync.when(
+                              data: (statistics) => statistics != null
+                                  ? Padding(
+                                      key: ValueKey(
+                                          'statistics_${statistics.calculatedAt.millisecondsSinceEpoch}'),
+                                      padding: const EdgeInsets.all(16.0),
+                                      child: StatisticsTable(
+                                        statistics: statistics,
+                                        l10n: l10n,
+                                      ),
+                                    )
+                                  : Center(
+                                      key: const ValueKey('no_data'),
+                                      child: Text(
+                                        l10n.noDataError,
+                                        style: theme.textTheme.titleMedium
+                                            ?.copyWith(
+                                          color: theme.colorScheme.onSurface
+                                              .withOpacity(0.6),
+                                        ),
+                                      ),
                                     ),
+                              loading: () => const SizedBox.shrink(
+                                  key: ValueKey('loading')),
+                              error: (error, stack) => Center(
+                                key: ValueKey('error_$error'),
+                                child: Text(
+                                  '${l10n.error}: $error',
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    color: theme.colorScheme.error,
                                   ),
                                 ),
-                          loading: () => const Center(
-                            child: CircularProgressIndicator(),
-                          ),
-                          error: (error, stack) => Center(
-                            child: Text(
-                              '${l10n.error}: $error',
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                color: theme.colorScheme.error,
                               ),
                             ),
-                          ),
-                        ),
+                          );
+                        },
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -240,49 +201,107 @@ class HomeScreen extends ConsumerWidget {
         return Icons.cloud_done;
     }
   }
+}
 
-  Widget _buildActionButton({
-    required BuildContext context,
-    required String label,
-    required bool isEnabled,
-    required VoidCallback onPressed,
-    bool isLoading = false,
-  }) {
+class StartStopButton extends ConsumerWidget {
+  const StartStopButton({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    return SizedBox(
-      height: 48,
-      child: ElevatedButton(
-        onPressed: isEnabled ? onPressed : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: theme.colorScheme.primary,
-          foregroundColor: theme.colorScheme.onPrimary,
-          disabledBackgroundColor:
-              theme.colorScheme.onSurface.withOpacity(0.12),
-          disabledForegroundColor:
-              theme.colorScheme.onSurface.withOpacity(0.38),
-          elevation: isEnabled ? 4 : 0,
-        ),
-        child: isLoading
-            ? SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    theme.colorScheme.onPrimary,
-                  ),
+    final connectionState = ref.watch(connectionStateProvider);
+
+    return _buildActionButton(
+      context: context,
+      label: connectionState == WebSocketState.disconnected
+          ? l10n.start
+          : l10n.stop,
+      isEnabled: true,
+      onPressed: () async {
+        if (connectionState == WebSocketState.disconnected) {
+          ref.read(connectionStateProvider.notifier).state =
+              WebSocketState.connecting;
+          final websocketService = ref.read(websocketServiceProvider);
+          final result = await websocketService.connect();
+          result.fold(
+            (failure) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(failure.message),
+                  backgroundColor: theme.colorScheme.error,
                 ),
-              )
-            : Text(
-                label,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: isEnabled
-                      ? theme.colorScheme.onPrimary
-                      : theme.colorScheme.onSurface.withOpacity(0.38),
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-      ),
+              );
+              ref.read(connectionStateProvider.notifier).state =
+                  WebSocketState.disconnected;
+            },
+            (_) {
+              ref.read(connectionStateProvider.notifier).state =
+                  WebSocketState.receiving;
+              if (ref.read(startTimeProvider) == null) {
+                ref.read(startTimeProvider.notifier).state = DateTime.now();
+              }
+            },
+          );
+        } else {
+          final websocketService = ref.read(websocketServiceProvider);
+          await websocketService.disconnect();
+          ref.read(connectionStateProvider.notifier).state =
+              WebSocketState.disconnected;
+        }
+      },
     );
   }
+}
+
+class StatisticsButton extends ConsumerWidget {
+  const StatisticsButton({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final startTime = ref.watch(startTimeProvider);
+    final isCalculating =
+        ref.watch(statisticsProvider.select((value) => value.isLoading));
+
+    return _buildActionButton(
+      context: context,
+      label: l10n.statistics,
+      isEnabled: startTime != null && !isCalculating,
+      onPressed: () {
+        ref.read(statisticsUpdateProvider.notifier).state++;
+      },
+    );
+  }
+}
+
+Widget _buildActionButton({
+  required BuildContext context,
+  required String label,
+  required bool isEnabled,
+  required VoidCallback onPressed,
+}) {
+  final theme = Theme.of(context);
+  return SizedBox(
+    height: 48,
+    child: ElevatedButton(
+      onPressed: isEnabled ? onPressed : null,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: theme.colorScheme.primary,
+        foregroundColor: theme.colorScheme.onPrimary,
+        disabledBackgroundColor: theme.colorScheme.onSurface.withOpacity(0.12),
+        disabledForegroundColor: theme.colorScheme.onSurface.withOpacity(0.38),
+        elevation: isEnabled ? 4 : 0,
+      ),
+      child: Text(
+        label,
+        style: theme.textTheme.titleMedium?.copyWith(
+          color: isEnabled
+              ? theme.colorScheme.onPrimary
+              : theme.colorScheme.onSurface.withOpacity(0.38),
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    ),
+  );
 }
