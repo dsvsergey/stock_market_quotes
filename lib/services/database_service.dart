@@ -89,6 +89,21 @@ class DatabaseService {
     }
   }
 
+  Future<Either<DatabaseFailure, List<Quote>>> getQuotesSinceStart(
+      DateTime startTime) async {
+    try {
+      final isar = await db;
+      final quotes = await isar.quotes
+          .filter()
+          .timestampGreaterThan(startTime, include: true)
+          .sortByTimestamp()
+          .findAll();
+      return right(quotes);
+    } catch (e) {
+      return left(DatabaseFailure('${l10n.getQuotesError}: $e'));
+    }
+  }
+
   Stream<List<Quote>> watchQuotes() async* {
     final isar = await db;
     yield* isar.quotes.where().watch(fireImmediately: true);

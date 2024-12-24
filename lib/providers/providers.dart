@@ -70,10 +70,12 @@ final statisticsUpdateProvider = StateProvider<int>((ref) => 0);
 final statisticsProvider = FutureProvider<Statistics?>((ref) async {
   final statisticsService = ref.watch(statisticsServiceProvider);
   final databaseService = ref.watch(databaseServiceProvider);
+  final startTime = ref.watch(startTimeProvider);
   final _ = ref.watch(statisticsUpdateProvider);
 
-  // Отримуємо останні 1000 котирувань
-  final quotesResult = await databaseService.getLastQuotes(1000);
+  if (startTime == null) return null;
+
+  final quotesResult = await databaseService.getQuotesSinceStart(startTime);
 
   return quotesResult.fold(
     (failure) => null,
@@ -90,5 +92,9 @@ final statisticsProvider = FutureProvider<Statistics?>((ref) async {
 }, dependencies: [
   statisticsServiceProvider,
   databaseServiceProvider,
-  statisticsUpdateProvider
+  statisticsUpdateProvider,
+  startTimeProvider
 ]);
+
+// Час старту
+final startTimeProvider = StateProvider<DateTime?>((ref) => null);

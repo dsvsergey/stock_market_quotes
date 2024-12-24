@@ -64,7 +64,10 @@ class HomeScreen extends ConsumerWidget {
                     backgroundColor: theme.colorScheme.error,
                   ),
                 ),
-                (_) => ref.read(statisticsUpdateProvider.notifier).state++,
+                (_) {
+                  ref.read(statisticsUpdateProvider.notifier).state++;
+                  ref.read(startTimeProvider.notifier).state = null;
+                },
               );
             },
           ),
@@ -114,6 +117,10 @@ class HomeScreen extends ConsumerWidget {
                         (_) {
                           ref.read(connectionStateProvider.notifier).state =
                               WebSocketState.receiving;
+                          if (ref.read(startTimeProvider) == null) {
+                            ref.read(startTimeProvider.notifier).state =
+                                DateTime.now();
+                          }
                         },
                       );
                     },
