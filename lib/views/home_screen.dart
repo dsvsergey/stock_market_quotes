@@ -94,49 +94,53 @@ class HomeScreen extends ConsumerWidget {
                 children: [
                   _buildActionButton(
                     context: context,
-                    label: l10n.start,
-                    isEnabled: connectionState == WebSocketState.disconnected &&
-                        !isCalculating,
+                    label: connectionState == WebSocketState.disconnected
+                        ? l10n.start
+                        : l10n.stop,
+                    isEnabled: !isCalculating,
                     onPressed: () async {
-                      ref.read(connectionStateProvider.notifier).state =
-                          WebSocketState.connecting;
-                      final websocketService =
-                          ref.read(websocketServiceProvider);
-                      final result = await websocketService.connect();
-                      result.fold(
-                        (failure) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(failure.message),
-                              backgroundColor: theme.colorScheme.error,
-                            ),
-                          );
-                          ref.read(connectionStateProvider.notifier).state =
-                              WebSocketState.disconnected;
-                        },
-                        (_) {
-                          ref.read(connectionStateProvider.notifier).state =
-                              WebSocketState.receiving;
-                          if (ref.read(startTimeProvider) == null) {
-                            ref.read(startTimeProvider.notifier).state =
-                                DateTime.now();
-                          }
-                        },
-                      );
+                      if (connectionState == WebSocketState.disconnected) {
+                        ref.read(connectionStateProvider.notifier).state =
+                            WebSocketState.connecting;
+                        final websocketService =
+                            ref.read(websocketServiceProvider);
+                        final result = await websocketService.connect();
+                        result.fold(
+                          (failure) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(failure.message),
+                                backgroundColor: theme.colorScheme.error,
+                              ),
+                            );
+                            ref.read(connectionStateProvider.notifier).state =
+                                WebSocketState.disconnected;
+                          },
+                          (_) {
+                            ref.read(connectionStateProvider.notifier).state =
+                                WebSocketState.receiving;
+                            if (ref.read(startTimeProvider) == null) {
+                              ref.read(startTimeProvider.notifier).state =
+                                  DateTime.now();
+                            }
+                          },
+                        );
+                      } else {
+                        final websocketService =
+                            ref.read(websocketServiceProvider);
+                        await websocketService.disconnect();
+                        ref.read(connectionStateProvider.notifier).state =
+                            WebSocketState.disconnected;
+                      }
                     },
                   ),
                   _buildActionButton(
                     context: context,
                     label: l10n.statistics,
-                    isEnabled: connectionState != WebSocketState.disconnected &&
-                        !isCalculating,
+                    isEnabled:
+                        ref.read(startTimeProvider) != null && !isCalculating,
                     isLoading: isCalculating,
                     onPressed: () async {
-                      final websocketService =
-                          ref.read(websocketServiceProvider);
-                      await websocketService.disconnect();
-                      ref.read(connectionStateProvider.notifier).state =
-                          WebSocketState.disconnected;
                       ref.read(statisticsUpdateProvider.notifier).state++;
                       await ref.read(statisticsProvider.future);
                     },
