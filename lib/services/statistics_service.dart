@@ -4,7 +4,6 @@ import 'package:dartz/dartz.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/statistics.dart';
-import '../models/online_statistics.dart';
 import 'database_service.dart';
 import 'websocket_service.dart';
 
