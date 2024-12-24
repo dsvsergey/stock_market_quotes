@@ -8,6 +8,7 @@ import 'package:dartz/dartz.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/quote.dart';
+import '../models/online_statistics.dart';
 import 'database_service.dart';
 
 class WebSocketFailure {
@@ -33,14 +34,18 @@ class WebSocketService {
   SendPort? _sendPort;
   bool _shouldRun = false;
   bool _autoReconnect = true;
+  final _onlineStats = OnlineStatistics();
 
   WebSocketService(this._databaseService, this.l10n);
 
   bool get isConnected => _isConnected;
   Stream<Quote> get quoteStream => _quoteController.stream;
   Stream<bool> get isolateStream => _isolateController.stream;
+  OnlineStatistics get statistics => _onlineStats;
 
   Future<Either<WebSocketFailure, Unit>> connect() async {
+    if (_isConnected) return right(unit);
+
     try {
       log(l10n.creatingConnection);
 
@@ -72,6 +77,7 @@ class WebSocketService {
 
       _shouldRun = true;
       _autoReconnect = true;
+      _onlineStats.reset();
       await _startIsolate();
 
       _socket?.listen(
@@ -131,12 +137,7 @@ class WebSocketService {
       if (message is SendPort) {
         _sendPort = message;
       } else if (message is Quote) {
-        _databaseService.saveQuote(message).then(
-              (result) => result.fold(
-                (failure) => log('${l10n.saveError}: ${failure.message}'),
-                (_) => _quoteController.add(message),
-              ),
-            );
+        _handleQuote(message);
       }
     });
   }
@@ -272,6 +273,12 @@ class WebSocketService {
     _throttleTimer?.cancel();
     _quoteController.close();
     _isolateController.close();
+  }
+
+  void _handleQuote(Quote quote) {
+    _quoteController.add(quote);
+    _onlineStats.addValue(quote.value, quote.quoteId);
+    _databaseService.saveQuote(quote);
   }
 }
 
