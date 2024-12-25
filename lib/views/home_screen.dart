@@ -43,29 +43,6 @@ class HomeScreen extends ConsumerWidget {
             theme: theme,
           ),
           const SizedBox(width: 18),
-          IconButton(
-            icon: Icon(
-              Icons.delete_outline,
-              color: theme.colorScheme.error,
-            ),
-            onPressed: () async {
-              final databaseService = ref.read(databaseServiceProvider);
-              final result = await databaseService.clearAllQuotes();
-              result.fold(
-                (failure) => ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(failure.message),
-                    backgroundColor: theme.colorScheme.error,
-                  ),
-                ),
-                (_) {
-                  ref.read(statisticsUpdateProvider.notifier).state++;
-                  ref.read(startTimeProvider.notifier).state = null;
-                },
-              );
-            },
-          ),
-          const SizedBox(width: 16),
         ],
       ),
       body: Container(
